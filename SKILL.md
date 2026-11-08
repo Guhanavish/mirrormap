@@ -4,7 +4,7 @@ description: Audit software projects against approved requirements using indepen
 license: MIT
 compatibility: Requires Python 3.10+ for the bundled optional audit CLI and read access to the project. Runtime and browser checks require additional tools provided by the host agent.
 metadata:
-  version: "0.2.0"
+  version: "0.3.0"
 ---
 
 # MirrorMap — Evidence Atlas for project intelligence
@@ -27,7 +27,7 @@ metadata:
 
 Use stable IDs (`REQ.auth.login`, `impl.file.*`, `verify.auth.login`) and explicit reviewed requirement-to-implementation links. The human-readable Mermaid mindmap is **rendered from** the graph, not an authority itself. See [schema and evidence rules](references/data-model.md).
 
-## New: choose a scoped audit mode (v0.2)
+## Choose an audit mode and route inventory (v0.3)
 
 Prefer the guided CLI for initial analysis, then use the lower-level steps below when reviewing evidence:
 
@@ -46,6 +46,8 @@ The default specification state is **draft**. Use `--approved-spec` only if the 
 | `pr` | Git changed-file context with `--base`; not proof of regression impact |
 | `drift` | Compare two reviewed audits with `--baseline`; changes are not automatic regressions |
 | `visual` | Import previously observed browser evidence; does not launch a browser by itself |
+
+Run `python -m projectmirror routes /path/to/repo` to list static Next.js/FastAPI route **candidates**, not proof that any route works.
 
 Every guided audit produces `dashboard.html`, Mermaid, JSON findings, Markdown report, and a **review-only plan**. Never treat generated candidate links as reviewed requirement mappings. See `docs/getting-started.md` and `docs/guides/audit-modes.md` when using the source checkout.
 
