@@ -16,7 +16,17 @@ Turn approved requirements, real implementation evidence, and observed tests int
 [![License: MIT](https://img.shields.io/badge/License-MIT-0A9C83)](LICENSE)
 [![Status](https://img.shields.io/badge/Release-0.1.0_Beta-414978)](#roadmap)
 
-[**Get started**](#-quick-start) · [**See how it works**](#-how-it-works) · [**Why it's different**](#-why-projectmirror) · [**Contribute**](CONTRIBUTING.md)
+### Explore MirrorMap
+
+[![Creator Website](https://img.shields.io/badge/Creator's_Website-Visit-0B766E?style=for-the-badge&logo=vercel&logoColor=white)](https://guhanavish.vercel.app/)
+[![Quick Start](https://img.shields.io/badge/Quick_Start-Try_MirrorMap-18343A?style=for-the-badge&logo=rocket&logoColor=white)](#-quick-start)
+[![Documentation](https://img.shields.io/badge/Documentation-Read_the_Guide-18343A?style=for-the-badge&logo=readthedocs&logoColor=white)](references/workflow.md)
+[![Report a Bug](https://img.shields.io/badge/Report_a_Bug-Open_an_Issue-18343A?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Guhanavish/mirrormap/issues/new)
+[![Contribute](https://img.shields.io/badge/Contribute-Get_Involved-18343A?style=for-the-badge&logo=git&logoColor=white)](CONTRIBUTING.md)
+
+[**How it works**](#-how-it-works) · [**Why it's different**](#-why-projectmirror) · [**Roadmap**](#-roadmap) · [**See examples**](examples/README.md)
+
+<sub>Creator's Website links to the author's portfolio, not a hosted MirrorMap dashboard.</sub>
 
 </div>
 
