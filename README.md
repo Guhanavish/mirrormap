@@ -9,7 +9,7 @@
 [![Tests](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml/badge.svg)](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-29423C?logo=python&logoColor=white)](pyproject.toml)
 [![MIT](https://img.shields.io/badge/License-MIT-29423C)](LICENSE)
-[![Release](https://img.shields.io/badge/Version-v0.4.0_beta-2D6254)](CHANGELOG.md)
+[![Official beta](https://img.shields.io/badge/Release-v0.4.0--beta-2D6254)](https://github.com/Guhanavish/mirrormap/releases/tag/v0.4.0-beta)
 [![Agent Skill](https://img.shields.io/badge/Open_Agent_Skill-SKILL.md-A5D9B4)](SKILL.md)
 
 [![Start Auditing](https://img.shields.io/badge/START_AUDITING-Quick_Start-9AE0BC?style=for-the-badge&logo=python&logoColor=14231C)](#get-a-result-in-one-command)
@@ -30,6 +30,8 @@
 **[Watch or download the 30-second MP4](assets/mirrormap-30s-demo.mp4)** · [Follow the reproducible demo script](docs/launch/demo-script.md)
 
 This narrated-by-captions, edited walkthrough uses the **bundled fixture** and an actual captured dashboard image. The initial audit has three **unknown** requirements; after importing **reviewed sample** links and scoped absence evidence, it reports one **missing** and two **unverified**. These are fixture results, **not** a claim of automatic production bug detection or a live uncut recording.
+
+[**Get the verified beta package**](https://github.com/Guhanavish/mirrormap/releases/tag/v0.4.0-beta) · [**Enable the optional static website**](docs/launch/pages-setup.md)
 
 ## Install as an agent skill
 

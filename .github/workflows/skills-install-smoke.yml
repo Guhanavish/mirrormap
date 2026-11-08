@@ -1,0 +1,35 @@
+name: Verify Skills CLI installation
+
+on:
+  pull_request:
+    paths:
+      - SKILL.md
+      - .github/workflows/skills-install-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: Fresh Codex skill install
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Set up supported Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.20.0'
+      - name: Install published MirrorMap skill in a clean directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/mirrormap-skills-install"
+          cd "${RUNNER_TEMP}/mirrormap-skills-install"
+          npx --yes skills@1.7.6 add Guhanavish/mirrormap \
+            --skill mirrormap -a codex --copy -y
+          skill_file=".agents/skills/mirrormap/SKILL.md"
+          test -s "$skill_file"
+          grep -Eq 'ProjectMirror|MirrorMap' "$skill_file"
+          head -n 8 "$skill_file"
+          echo "Installed skill: $skill_file"
