@@ -31,7 +31,7 @@ For the current product, start with feedback from three developers who can repro
 ## Finish publishing
 
 - [Activate the prepared GitHub Pages branch](pages-setup.md) — repository owner settings required
-- [Official beta release notes](release-v0.4.0-beta.md) — the publishing workflow builds and publishes verified assets
+- [Official published v0.4.0-beta release](https://github.com/Guhanavish/mirrormap/releases/tag/v0.4.0-beta) — verified assets and checksums
 - [Animated preview](../../assets/mirrormap-demo-preview.webp) and [30-second MP4](../../assets/mirrormap-30s-demo.mp4)
 
 The beta release workflow is intentionally one-shot on first merge into `main` (or via a manual dispatch). It runs tests and builds release artifacts before publishing.
