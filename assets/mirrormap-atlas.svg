@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="570" viewBox="0 0 1600 570" role="img" aria-labelledby="title desc">
+  <title id="title">MirrorMap — evidence over assumption</title>
+  <desc id="desc">Editorial dark design with three independent evidence layers — intent, implementation, and verification — converging into an auditable map.</desc>
+  <defs>
+    <pattern id="dots" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.5" fill="#6b8d86" opacity=".22"/></pattern>
+    <linearGradient id="film" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#172a32"/><stop offset="1" stop-color="#0b181f"/></linearGradient>
+  </defs>
+  <rect width="1600" height="570" rx="32" fill="#0b171e"/>
+  <rect width="1600" height="570" rx="32" fill="url(#dots)"/>
+  <path d="M0 505 C330 465 510 540 805 495 S1255 490 1600 415 V570 H0Z" fill="#1a3838" opacity=".55"/>
+  <path d="M0 520 C320 474 560 555 832 510 S1275 497 1600 447" stroke="#8ed8b4" opacity=".3" stroke-width="2" fill="none"/>
+  <g transform="translate(88 81)">
+    <g fill="none" stroke-width="11" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M8 47 L32 8 L56 47 L32 86 Z" stroke="#a3e7c8"/>
+      <path d="M42 47 L66 8 L90 47 L66 86 Z" stroke="#dce5ba" opacity=".8"/>
+    </g>
+    <text x="121" y="61" fill="#eff2e8" font-size="49" font-family="Inter, ui-sans-serif, Arial, sans-serif" font-weight="800" letter-spacing="-3">MirrorMap</text>
+    <text x="5" y="145" fill="#9ae0bd" font-family="Inter, ui-sans-serif, Arial, sans-serif" font-weight="700" letter-spacing="4" font-size="17">PROJECT INTELLIGENCE FOR AI AGENTS</text>
+    <text x="2" y="244" fill="#f2f3e8" font-family="Inter, ui-sans-serif, Arial, sans-serif" font-weight="800" letter-spacing="-3" font-size="67">Evidence over</text>
+    <text x="2" y="323" fill="#a1e4c0" font-family="Inter, ui-sans-serif, Arial, sans-serif" font-weight="800" letter-spacing="-3" font-size="67">assumption.</text>
+    <text x="5" y="380" fill="#bfd0c8" font-family="Inter, ui-sans-serif, Arial, sans-serif" font-size="23">Map intent. Inspect reality. Verify changes.</text>
+    <rect x="0" y="413" width="380" height="2" fill="#49776a"/>
+    <text x="4" y="452" fill="#a8b8af" font-family="ui-monospace, monospace" font-size="18">A clearer way to understand your code.</text>
+  </g>
+  <g transform="translate(865 73)">
+    <rect x="0" y="0" width="640" height="430" rx="24" fill="url(#film)" stroke="#477064" stroke-width="2"/>
+    <text x="35" y="47" fill="#c4d8cc" font-family="ui-monospace, monospace" font-size="17" letter-spacing="2">/ ATLAS   01</text>
+    <path d="M75 123 Q150 123 190 205 T325 205" fill="none" stroke="#688d83" stroke-width="2"/>
+    <path d="M75 231 Q150 231 190 231 T325 205" fill="none" stroke="#688d83" stroke-width="2"/>
+    <path d="M75 339 Q150 339 190 262 T325 205" fill="none" stroke="#688d83" stroke-width="2"/>
+    <g font-family="ui-sans-serif, Arial, sans-serif" font-weight="700" font-size="21">
+      <rect x="32" y="94" width="209" height="60" rx="10" fill="#26433b" stroke="#83c9a9"/>
+      <text x="51" y="132" fill="#ccebd9">01  Intent</text>
+      <rect x="32" y="201" width="209" height="60" rx="10" fill="#253742" stroke="#82b8c1"/>
+      <text x="51" y="239" fill="#d2e7e8">02  Reality</text>
+      <rect x="32" y="308" width="209" height="60" rx="10" fill="#37392e" stroke="#c8cc88"/>
+      <text x="51" y="346" fill="#ececbd">03  Proof</text>
+    </g>
+    <circle cx="327" cy="225" r="56" fill="#173b35" stroke="#aadcc4" stroke-width="2"/>
+    <circle cx="327" cy="225" r="41" fill="none" stroke="#508773" stroke-dasharray="5 6" stroke-width="2"/>
+    <path d="M302 225 L318 242 L353 209" stroke="#caf4dc" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M383 225 H500" stroke="#8bd5b5" stroke-width="3" fill="none"/>
+    <rect x="467" y="164" width="140" height="120" rx="18" fill="#224139" stroke="#8bd5b5"/>
+    <text x="537" y="205" text-anchor="middle" font-family="ui-monospace, monospace" font-size="15" fill="#a4dfc6">TRACEABLE</text>
+    <text x="537" y="237" text-anchor="middle" font-family="ui-sans-serif, Arial, sans-serif" font-size="24" font-weight="700" fill="#f0f3e7">AUDIT</text>
+    <text x="537" y="261" text-anchor="middle" font-family="ui-monospace, monospace" font-size="13" fill="#91bdae">human-gated</text>
+    <text x="36" y="404" fill="#9bb5aa" font-family="ui-monospace, monospace" font-size="15">Readable maps / real evidence / scoped plans</text>
+  </g>
+</svg>
