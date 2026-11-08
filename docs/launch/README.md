@@ -1,23 +1,37 @@
 # MirrorMap launch kit
 
-**Status: prepared materials; not proof of a completed external launch.**
+These materials are a **distribution kit**, not claims of popularity, endorsements, or a completed external launch. They are based on the real v0.4.0 beta and its intentionally incomplete demo fixture. No external community post is sent automatically.
 
-MirrorMap is an MIT-licensed read-only audit skill. It separates approved requirements, structural code inventory and actual verification evidence, and produces a local interactive audit and review-only action plan.
+## Choose the right starting point
 
-| Task | Resource |
+| Goal | Resource |
 |---|---|
-| Experience the real fixture | [Demo walkthrough](demo-script.md) |
-| Prepare the first GitHub prerelease | [Release notes](release-v0.4.0-beta.md) |
-| Correct discovery metadata | [Repository settings](metadata.md) |
-| Share on relevant developer platforms | [Post drafts](community-posts.md) |
-| Plan four weeks of learning | [30-day launch plan](30-day-plan.md) |
-| Measure genuine adoption | [Measurement guide](measuring.md) |
+| See the actual demo and its evidence limitations | [30-second demo script](demo-script.md) |
+| Publish the first official prerelease | [Release notes and checklist](release-v0.4.0-beta.md) |
+| Fix GitHub discovery settings | [Repository metadata](metadata.md) |
+| Share outside GitHub responsibly | [Copy-ready posts](community-posts.md) |
+| Plan small weekly launch experiments | [30-day plan](30-day-plan.md) |
+| Know whether people are using it | [Measurement guide](measuring.md) |
 
-### Be accurate
+## Three honest messages
 
-- The first demo run has three unknown requirements. Only **reviewed fixture facts** establish one missing and two unverified requirements in a second run.
-- Runtime tests, browser checks and source edits are not performed by the core CLI.
-- Do not imply a hosted application, verified compatibility with every agent, or an official prerelease until each exists.
-- Do not ask for artificial stars, paid engagement or votes. Respect each community's self-promotion rules.
+1. MirrorMap **compares approved intent, actual source, and observed test evidence**. It does not infer missing requirements from the source code.
+2. The v0.4 core CLI is **read-only**, with an interactive local dashboard; it does not execute applications or repair projects itself.
+3. Structural scanning and unreviewed test results are **candidates**, not proof that features work or fail.
 
-A strong launch goal is a small group of developers who independently reproduce the example and provide actionable feedback.
+## Avoid
+
+- Exaggerated claims such as “finds every bug,” “10x development,” or “guaranteed production ready.”
+- Asking communities to upvote or star the project, paid/automated star campaigns, or reposting identical promotional messages indiscriminately.
+- Reporting install counts until a real installation has been observed.
+- Announcing a GitHub Release or a hosted demo before those endpoints are actually live.
+
+For the current product, start with feedback from three developers who can reproduce the demo and make one improvement based on their experience.
+
+## Finish publishing
+
+- [Activate the prepared GitHub Pages branch](pages-setup.md) — repository owner settings required
+- [Official beta release notes](release-v0.4.0-beta.md) — the publishing workflow builds and publishes verified assets
+- [Animated preview](../../assets/mirrormap-demo-preview.webp) and [30-second MP4](../../assets/mirrormap-30s-demo.mp4)
+
+The beta release workflow is intentionally one-shot on first merge into `main` (or via a manual dispatch). It runs tests and builds release artifacts before publishing.

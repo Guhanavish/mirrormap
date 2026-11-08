@@ -1,28 +1,32 @@
-# A truthful 30-second walkthrough
+# 30-second MirrorMap walkthrough (real fixture, no invented findings)
 
-This is a recording script you can reproduce yourself from the bundled demo. **No live screen recording is claimed to be hosted here.** A 30-second edited MP4 and animated preview are available in the separate downloadable project launch archive, while the repository already includes a genuine Chromium screenshot at [assets/mirrormap-interactive-atlas.webp](../../assets/mirrormap-interactive-atlas.webp).
+This repository includes `assets/mirrormap-30s-demo.mp4` and its animated teaser `assets/mirrormap-demo-preview.webp`. The video is an **edited six-scene storyboard** using real CLI outputs and an authentic previous Chromium dashboard capture. It is **not** an uncut live screen recording.
 
-| Time | What to show | What it establishes |
+| Time | Scene | Claim backed by repository behavior |
 |---|---|---|
-| 0–5s | MirrorMap's three evidence layers | Intent, implementation and verification are separate |
-| 5–10s | Run the bundled demo command | It scans structural source data |
-| 10–15s | Open offline dashboard.html | Three initially unknown requirements; not automatic bugs |
-| 15–20s | Import explicitly reviewed sample links and absence claim | Sample audit reports one missing and two unverified |
-| 20–25s | Open the review-only remediation plan | The CLI does not change application files |
-| 25–30s | Show project URL and invitation to reproduce | github.com/Guhanavish/mirrormap |
+| 00:00–00:05 | The three separate evidence views | Intent, implementation, verification are independent inputs |
+| 00:05–00:10 | Real CLI syntax | The command runs a read-only demo with approved fixture requirements |
+| 00:10–00:15 | Authentic offline dashboard capture | The initial scan reports three unknown requirements |
+| 00:15–00:20 | Reviewed fixture links and absence | A separate sample run reports one missing and two unverified |
+| 00:20–00:25 | Review-only plan | The CLI cannot automatically change application files |
+| 00:25–00:30 | Project repository link | Source: github.com/Guhanavish/mirrormap |
 
-### Reproduce the initial audit
+## Reproduce the story
 
-From the repository root:
+```bash
+python -m projectmirror audit examples/demo-app \
+  --spec examples/demo-app/requirements.md --approved-spec --mode deep
 
-    python -m projectmirror audit examples/demo-app --spec examples/demo-app/requirements.md --approved-spec --mode deep
+python -m projectmirror audit examples/demo-app \
+  --spec examples/demo-app/requirements.md --approved-spec --mode deep \
+  --links examples/fixture-reviewed-links.json \
+  --absence examples/fixture-reviewed-absence.json
+```
 
-For the reviewed example:
+Use the `--approved-spec` flag only for this deliberately prepared fixture or a real user-approved spec. Neither run executes application code.
 
-    python -m projectmirror audit examples/demo-app --spec examples/demo-app/requirements.md --approved-spec --mode deep --links examples/fixture-reviewed-links.json --absence examples/fixture-reviewed-absence.json
+## Publishing guidance
 
-Use the approved-spec flag on a real project only if its specification truly has been approved by the user. No application source is executed by these commands.
-
-### Recording best practices
-
-Show the actual commands, the full results, and the limits on each screen. Use captioned screen capture, trim idle time and export an optimized MP4/WebP teaser. Avoid any claim that the demo proves comprehensive security auditing or automatically repairs a production app.
+- Embed the animated WebP in the README and link it to the 30-second MP4.
+- If posting to a video platform, use captions and label the walkthrough as a demonstration fixture.
+- Do not say the video proves browser testing or automatically found a production vulnerability.

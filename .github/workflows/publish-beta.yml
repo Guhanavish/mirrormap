@@ -1,0 +1,61 @@
+name: Publish v0.4.0-beta prerelease
+
+# The path-filtered push is a one-time opt-in when this workflow first lands
+# on main. Subsequent pushes do not trigger release publication.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-beta.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mirrormap-v0.4.0-beta-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'Guhanavish/mirrormap' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the release source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify sources and tests
+        run: |
+          python -m compileall -q projectmirror tests
+          python -m unittest discover -s tests -v
+          python -m projectmirror doctor
+      - name: Build release assets from this commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          python -m pip wheel --no-deps . --wheel-dir dist
+          git archive --format=zip --output dist/mirrormap-v0.4.0-beta-source.zip HEAD
+          (cd dist && sha256sum *.whl *.zip > SHA256SUMS.txt)
+      - name: Publish official GitHub prerelease once
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view v0.4.0-beta >/dev/null 2>&1; then
+            echo 'Release v0.4.0-beta already exists; refusing to overwrite.'
+            exit 0
+          fi
+          gh release create v0.4.0-beta \
+            dist/*.whl dist/mirrormap-v0.4.0-beta-source.zip dist/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title 'MirrorMap v0.4.0-beta — Evidence Atlas' \
+            --notes-file docs/launch/release-v0.4.0-beta.md \
+            --prerelease
