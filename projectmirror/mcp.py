@@ -15,7 +15,7 @@ from .core import AuditError, ensure_output, load
 from .experience import audit_project, doctor
 
 PROTOCOL = "2025-06-18"
-VERSION = "0.2.0"
+VERSION = "0.4.0"
 
 TOOLS = [
     {"name": "mirrormap_doctor", "description": "Report local tool presence; no repository access.",
@@ -26,7 +26,8 @@ TOOLS = [
          "spec": {"type": "string", "description": "Optional approved or draft requirements file"},
          "out": {"type": "string", "description": "Optional separate report output folder"},
          "mode": {"type": "string", "enum": ["quick", "deep", "pr", "drift", "visual"]},
-         "base": {"type": "string", "description": "Git base ref for PR inventory"}},
+         "base": {"type": "string", "description": "Git base ref for PR inventory"},
+         "junit": {"type": "string", "description": "Optional existing JUnit XML report under MIRRORMAP_ALLOWED_ROOTS; only unreviewed candidates"}},
          "additionalProperties": False}},
     {"name": "mirrormap_read_report", "description": "Read one generated MirrorMap report for an allowlisted project, capped to 30 KB.",
      "inputSchema": {"type": "object", "required": ["out"], "properties": {
@@ -62,7 +63,12 @@ def invoke(name: str, args: dict) -> dict:
             _allowlisted(source)
         else:
             source = None
-        return audit_project(project, spec=source, out=args.get("out"), mode=args.get("mode", "quick"), base=args.get("base"))
+        junit = args.get("junit")
+        if junit is not None and not isinstance(junit, str):
+            raise AuditError("junit must be a path string")
+        junit_path = _allowlisted(Path(junit)) if junit else None
+        return audit_project(project, spec=source, out=args.get("out"), mode=args.get("mode", "quick"),
+                             base=args.get("base"), junit_sources=[junit_path] if junit_path else None)
     if name == "mirrormap_read_report":
         out = Path(args.get("out", "")).expanduser().resolve()
         m = load(out / "audit-manifest.json")

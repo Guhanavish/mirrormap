@@ -9,7 +9,7 @@
 [![Tests](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml/badge.svg)](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-29423C?logo=python&logoColor=white)](pyproject.toml)
 [![MIT](https://img.shields.io/badge/License-MIT-29423C)](LICENSE)
-[![Release](https://img.shields.io/badge/Version-v0.3.0_beta-2D6254)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/Version-v0.4.0_beta-2D6254)](CHANGELOG.md)
 [![Agent Skill](https://img.shields.io/badge/Open_Agent_Skill-SKILL.md-A5D9B4)](SKILL.md)
 
 [![Start Auditing](https://img.shields.io/badge/START_AUDITING-Quick_Start-9AE0BC?style=for-the-badge&logo=python&logoColor=14231C)](#get-a-result-in-one-command)
@@ -17,7 +17,7 @@
 [![Creator](https://img.shields.io/badge/CREATOR-Visit_Website-18313A?style=for-the-badge&logo=vercel&logoColor=white)](https://guhanavish.vercel.app/)
 [![Contribute](https://img.shields.io/badge/CONTRIBUTE-Open_Source-18313A?style=for-the-badge&logo=github&logoColor=white)](CONTRIBUTING.md)
 
-[**Why it exists**](#why-mirrormap-exists) · [**How it works**](#the-evidence-atlas) · [**Audit modes**](#one-engine-five-views) · [**Integrations**](#meet-your-agent-where-it-works) · [**Roadmap**](#roadmap)
+[**Why it exists**](#why-mirrormap-exists) · [**How it works**](#the-evidence-atlas) · [**Interactive Atlas**](#interactive-evidence-atlas) · [**JUnit evidence**](#import-test-evidence-without-running-code) · [**Audit modes**](#one-engine-five-views) · [**Integrations**](#meet-your-agent-where-it-works) · [**Roadmap**](#roadmap)
 
 </div>
 
@@ -59,7 +59,7 @@ flowchart LR
 Every conclusion needs a trail back to source, approved requirements, or verified observations. The pretty mindmap is simply a view of that underlying JSON model.
 
 > [!IMPORTANT]
-> **Source scanning is not functional testing.** MirrorMap's core does **not** execute the project's application code, automatically change files, or approve its own remediation. Browser tests and execution require separate host capabilities and permission. v0.3 is a beta, not an exhaustive bug detector.
+> **Source scanning is not functional testing.** MirrorMap's core does **not** execute the project's application code, automatically change files, or approve its own remediation. Browser tests and execution require separate host capabilities and permission. v0.4 is a beta, not an exhaustive bug detector.
 
 ## Get a result in one command
 
@@ -73,11 +73,11 @@ python -m projectmirror audit ./examples/demo-app \
   --approved-spec --mode deep
 ```
 
-The command prints an output directory **outside** the inspected project. Open `dashboard.html` in your browser or inspect the generated reports. `--approved-spec` is for an *actually approved* spec; the bundled fixture intentionally demonstrates one.
+The command prints an output directory **outside** the inspected project. Open the new **interactive** `dashboard.html` in your browser or inspect the generated reports. `--approved-spec` is for an *actually approved* spec; the bundled fixture intentionally demonstrates one.
 
 | Generated file | What you'll see |
 |---|---|
-| `dashboard.html` | Responsive, self-contained read-only audit report |
+| `dashboard.html` | Interactive, searchable, zoomable, offline three-layer evidence atlas |
 | `audit-report.md` | Classified requirements and rationale |
 | `mindmap.mmd` | Mermaid mindmap of findings |
 | `candidate-links.json` | Explicitly **unreviewed** possible code matches |
@@ -95,6 +95,30 @@ This is intentionally **structural inventory only**, not a false promise that th
 ### An actual demo result
 
 The included intentionally incomplete fixture yields **three `unknown` requirements** when no reviewed implementation links are supplied. That's the correct, conservative answer. See [the worked example](examples/README.md) for importing reviewed links and absence evidence to get a meaningful gap report.
+
+## Interactive Evidence Atlas
+
+Search findings, filter by classification, click graph nodes, zoom the three-lane **Intent → Implementation → Verification** graph, and inspect directly linked evidence without sending project data to a server. The dashboard is an **offline HTML document**, not a hosted tool or execution interface.
+
+![Actual MirrorMap demo audit displayed in Chromium: three unknown requirements with intent, implementation, and verification lanes](assets/mirrormap-interactive-atlas.webp)
+
+<sub>Real capture of the bundled demo project. The requirements are correctly marked **unknown**, not falsely reported as missing. The capture is not a claim that these features passed tests.</sub>
+
+[Interactive atlas guide](docs/guides/interactive-atlas.md) · [Re-render an existing audit](docs/guides/interactive-atlas.md#explore-the-audit)
+
+## Import test evidence without running code
+
+**v0.4** can automatically parse *existing* JUnit XML results, preserving source hashes and case outcomes. No project code or test runner is executed:
+
+```bash
+python -m projectmirror audit ./examples/demo-app \
+  --spec ./examples/demo-app/requirements.md --approved-spec \
+  --mode deep --junit ./examples/junit/sample-results.xml
+```
+
+This produces `junit-candidates.json` with observed passes, failures, and skips. **Importing a passing test does not make a feature complete.** The test must be linked to a declared acceptance criterion through an explicitly reviewed mapping at the correct repository revision, and implementation links must also be reviewed. Without that, the result stays unknown/unverified.
+
+[JUnit evidence guide](docs/guides/junit-evidence.md) · [Sample XML and mapping template](examples/junit/README.md)
 
 ## One engine, five views
 
@@ -185,11 +209,12 @@ The project welcomes reproducible reports, language-specific scanners, meaningfu
 - [x] **v0.1 Foundation:** independent maps, structural indexing, evidence-aware diff and reviewed plans.
 - [x] **v0.2 Evidence Atlas:** one-command audit, offline dashboard, five scoped modes, doctor, installer, candidate links, baseline comparison, Python API, experimental MCP and CI example.
 - [x] **v0.3 Route Atlas:** conservative Next.js and FastAPI route candidates, reusable read-only GitHub composite action, and richer integration guides.
-- [ ] **v0.4 Rich evidence:** framework-specific AST depth, meaningful test/coverage imports, safe link-review UX.
-- [ ] **v0.4 Connected workflows:** validated cross-agent installers, reproducible browser adapter, advanced PR impact and CI annotations.
-- [ ] **v1.0 Interactive review:** hosted docs/demo, approved-change interface, evaluations and verified plugin distribution.
+- [x] **v0.4 Interactive Atlas + JUnit import:** functional offline graph/search/zoom/detail UI and opt-in existing JUnit XML ingestion, plus optional GitHub Action evidence inputs.
+- [ ] **v0.5 Wider verification:** AST-depth adapters, optional permissioned browser probes, real coverage import and reviewer-friendly link assignment.
+- [ ] **v0.6 Connected workflows:** validated cross-agent installers, impact-aware PR audit and CI annotations.
+- [ ] **v1.0 Full experience:** hosted documentation/demo, independent verification integrations, host-enforced approval UI and evaluated plugin distribution.
 
-The live, interactive dashboard, fully automatic bug detection, agent-host approvals and hosted demo are **not** part of the v0.3 release. Read the [v0.3 release notes](docs/release-notes-v0.3.md) for exact scope.
+**v0.4 limitations:** The interactive dashboard is a local HTML artifact, **not** a hosted service. JUnit import reads results produced elsewhere, **not** tests it runs. Fully automatic bug detection, browser testing, approved code execution and hosted dashboards remain future work. See [v0.4 release notes](docs/release-notes-v0.4.md).
 
 ---
 

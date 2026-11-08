@@ -39,3 +39,8 @@ Use your agent's custom MCP-server UI to register the command with an absolute P
 ## Compatibility and security
 
 The server supports MCP `initialize`, `ping`, `tools/list`, and `tools/call` for its three tools. It does not currently support streaming progress, prompts, resources, OAuth, or remote transports. It uses the core JSON schema version 1.0. Tool input schemas are intentionally small; unknown arguments should not be used as a way to authorize elevated operations. Ensure you trust the connected agent's tool calls and filesystem permissions.
+
+
+### JUnit candidate collection (v0.4)
+
+The `mirrormap_audit` tool accepts an optional `junit` path to an **existing** XML file/directory within `MIRRORMAP_ALLOWED_ROOTS`. It imports cases as **unreviewed candidate evidence only**, never auto-generates verification nodes. For reviewed mapping and criterion promotion use the CLI's explicit `--test-map` workflow. See [JUnit evidence guide](../guides/junit-evidence.md). The generated offline `dashboard.html` is accessible from the local report directory; MCP does not start a web server.

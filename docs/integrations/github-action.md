@@ -33,10 +33,12 @@ Upload `steps.mirrormap.outputs.report-directory` with `actions/upload-artifact@
 | `spec` | unset | Optional requirement document within the checked-out repository; can also be an absolute path |
 | `approved-spec` | `false` | Must be set to `true` **only** after a person has actually approved the requirement document |
 | `base` | unset | Git ref for `pr` mode's changed-file inventory; fetch history first |
+| `junit` | unset | Existing JUnit XML file/directory **inside** `GITHUB_WORKSPACE`; does not run tests |
+| `test-map` | unset | Explicitly reviewed JUnit→criteria mapping; requires `junit`; revision must match Git HEAD |
 
 **Output:** `report-directory`, an absolute ephemeral path containing `dashboard.html`, `findings.json`, `audit-report.md`, `mindmap.mmd`, and other report files.
 
-This action intentionally **does not** auto-review evidence links or fail the job just because requirements remain `unknown`. To get verified conclusions, collect real tests and provide reviewed links and observation records to the CLI separately.
+This action intentionally **does not** auto-review evidence links or fail the job just because requirements remain `unknown`. To get verified conclusions, collect real tests and provide reviewed requirement-to-implementation links and observation records separately. The action can import existing JUnit reports, but never runs test suites or auto-approves mappings.
 
 ## Safety and scope
 

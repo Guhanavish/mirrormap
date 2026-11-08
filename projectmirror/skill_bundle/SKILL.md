@@ -4,7 +4,7 @@ description: Audit software projects against approved requirements using indepen
 license: MIT
 compatibility: Requires Python 3.10+ for the bundled optional audit CLI and read access to the project. Runtime and browser checks require additional tools provided by the host agent.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # MirrorMap — Evidence Atlas for project intelligence
@@ -27,7 +27,7 @@ metadata:
 
 Use stable IDs (`REQ.auth.login`, `impl.file.*`, `verify.auth.login`) and explicit reviewed requirement-to-implementation links. The human-readable Mermaid mindmap is **rendered from** the graph, not an authority itself. See [schema and evidence rules](references/data-model.md).
 
-## Choose an audit mode and route inventory (v0.3)
+## Choose an audit mode and route inventory (v0.4)
 
 Prefer the guided CLI for initial analysis, then use the lower-level steps below when reviewing evidence:
 
@@ -49,7 +49,17 @@ The default specification state is **draft**. Use `--approved-spec` only if the 
 
 Run `python -m projectmirror routes /path/to/repo` to list static Next.js/FastAPI route **candidates**, not proof that any route works.
 
-Every guided audit produces `dashboard.html`, Mermaid, JSON findings, Markdown report, and a **review-only plan**. Never treat generated candidate links as reviewed requirement mappings. See `docs/getting-started.md` and `docs/guides/audit-modes.md` when using the source checkout.
+Every guided audit produces an **interactive offline `dashboard.html`**, Mermaid, JSON findings, Markdown report, and a **review-only plan**. Search/filter/zoom/select in the HTML without a hosted service.
+
+### Collect existing test evidence (opt-in)
+
+```bash
+python -m projectmirror audit /path/to/repo --spec /path/to/approved-requirements.md \
+  --approved-spec --mode deep --junit /path/to/junit.xml
+# Add --test-map /path/to/reviewed-test-mapping.json ONLY after reviewing exact criterion links and revision.
+```
+
+JUnit XML is imported **without executing tests**. Without a reviewed mapping file, it stays in `junit-candidates.json` and cannot produce verification claims. Mapping IDs and stated revision are checked; the tool cannot attest when the test ran or whether its assertions prove the criterion. See `docs/guides/junit-evidence.md` in a source checkout. Never treat generated candidate links as reviewed requirement mappings. See `docs/getting-started.md` and `docs/guides/audit-modes.md` when using the source checkout.
 
 ### MCP / agent integration
 

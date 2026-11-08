@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="demo.auth" tests="3" failures="1" skipped="1">
+  <testcase classname="tests.Auth" name="test_successful_login" time="0.02" />
+  <testcase classname="tests.Auth" name="test_expired_session" time="0.01">
+    <failure type="AssertionError" message="Expected redirect to login">Redacted demonstration failure. Do not include secrets in real reports.</failure>
+  </testcase>
+  <testcase classname="tests.Auth" name="test_password_recovery">
+    <skipped message="Not implemented in fixture" />
+  </testcase>
+</testsuite>
