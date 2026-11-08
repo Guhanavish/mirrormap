@@ -271,6 +271,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--verification", type=Path, help="real test/browser observations")
     p.add_argument("--absence", type=Path, help="reviewed, scoped absence records")
     p.add_argument("--max-files", type=int, default=None)
+    p = commands.add_parser("routes", help="list static framework route candidates (never verifies endpoints)")
+    p.add_argument("repo", type=Path)
+    p.add_argument("--max-files", type=int, default=5000)
     commands.add_parser("doctor", help="check local runtime prerequisites")
     p = commands.add_parser("dashboard", help="render offline HTML from an existing audit folder")
     p.add_argument("--out", type=Path, required=True)
@@ -287,6 +290,14 @@ def main(argv: list[str] | None = None) -> int:
             res = audit_project(args.repo, args.spec, args.out, args.mode, spec_approved=args.approved_spec,
                                 base=args.base, baseline=args.baseline, links=args.links, verification=args.verification,
                                 absence=args.absence, max_files=args.max_files)
+        elif args.command == "routes":
+            repo = _repo_path(args.repo)
+            if args.max_files < 1:
+                raise AuditError("--max-files must be positive")
+            inventory, scan = index_repo(repo, args.max_files)
+            res = {"schema_version": SCHEMA, "repo": str(repo),
+                   "candidates": [n for n in inventory["nodes"] if n["kind"] == "route_candidate"],
+                   "scan": scan, "warning": "Static route declarations are not proof of runtime behavior."}
         elif args.command == "doctor":
             res = doctor()
         elif args.command == "dashboard":

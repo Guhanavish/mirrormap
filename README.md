@@ -9,7 +9,7 @@
 [![Tests](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml/badge.svg)](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-29423C?logo=python&logoColor=white)](pyproject.toml)
 [![MIT](https://img.shields.io/badge/License-MIT-29423C)](LICENSE)
-[![Release](https://img.shields.io/badge/Version-v0.2.0_beta-2D6254)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/Version-v0.3.0_beta-2D6254)](CHANGELOG.md)
 [![Agent Skill](https://img.shields.io/badge/Open_Agent_Skill-SKILL.md-A5D9B4)](SKILL.md)
 
 [![Start Auditing](https://img.shields.io/badge/START_AUDITING-Quick_Start-9AE0BC?style=for-the-badge&logo=python&logoColor=14231C)](#get-a-result-in-one-command)
@@ -59,7 +59,7 @@ flowchart LR
 Every conclusion needs a trail back to source, approved requirements, or verified observations. The pretty mindmap is simply a view of that underlying JSON model.
 
 > [!IMPORTANT]
-> **Source scanning is not functional testing.** MirrorMap's core does **not** execute the project's application code, automatically change files, or approve its own remediation. Browser tests and execution require separate host capabilities and permission. v0.2 is a beta, not an exhaustive bug detector.
+> **Source scanning is not functional testing.** MirrorMap's core does **not** execute the project's application code, automatically change files, or approve its own remediation. Browser tests and execution require separate host capabilities and permission. v0.3 is a beta, not an exhaustive bug detector.
 
 ## Get a result in one command
 
@@ -118,6 +118,15 @@ The modes share the same evidence rules. **PR mode does not automatically prove 
 </table>
 </div>
 
+**Discover source-level route candidates** (no application execution):
+
+```bash
+python -m projectmirror routes examples/routes-demo
+# or: python -m projectmirror routes /path/to/your-project
+```
+
+The structural adapter recognizes some Next.js file-based routes and Python FastAPI decorator declarations. **These are possible route registrations, not verified endpoints.** [See supported patterns and limitations](docs/guides/framework-routes.md) · [Reproducible example](examples/routes-demo/README.md).
+
 **Check your setup:**
 
 ```bash
@@ -134,6 +143,24 @@ python -m projectmirror install-skill --dest ~/.codex/skills/mirrormap --apply
 For Claude Code, replace the destination with its skills folder; never overwrite an existing install automatically. The installation script copies the portable skill and core to the requested destination and doesn't modify global agent configuration. For [skills.sh](https://skills.sh/) users, the external CLI may also support `npx skills add Guhanavish/mirrormap`; installation in specific agents should be verified rather than assumed.
 
 [**Install & setup guide**](docs/getting-started.md) · [**Agent integration patterns**](docs/integrations/agent-guides.md) · [**MCP contract**](docs/integrations/mcp.md)
+
+## Audit pull requests with GitHub Actions
+
+MirrorMap also ships a [reusable composite action](action.yml) for repositories that want read-only project reports as workflow artifacts. The action requires no third-party service or project dependency installation, and it never runs the checked-out application code.
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    persist-credentials: false
+- uses: actions/setup-python@v5
+  with:
+    python-version: '3.12'
+- uses: Guhanavish/mirrormap@main # Pin a reviewed commit SHA for production.
+  with:
+    mode: quick
+```
+
+[Complete PR workflow](examples/github-actions/mirrormap-composite-audit.yml) · [Action inputs, permissions and limitations](docs/integrations/github-action.md)
 
 ## The safety contract
 
@@ -157,11 +184,12 @@ The project welcomes reproducible reports, language-specific scanners, meaningfu
 
 - [x] **v0.1 Foundation:** independent maps, structural indexing, evidence-aware diff and reviewed plans.
 - [x] **v0.2 Evidence Atlas:** one-command audit, offline dashboard, five scoped modes, doctor, installer, candidate links, baseline comparison, Python API, experimental MCP and CI example.
-- [ ] **v0.3 Rich evidence:** framework-specific adapters, stronger AST and test/coverage imports, automatic safe link-review UX.
+- [x] **v0.3 Route Atlas:** conservative Next.js and FastAPI route candidates, reusable read-only GitHub composite action, and richer integration guides.
+- [ ] **v0.4 Rich evidence:** framework-specific AST depth, meaningful test/coverage imports, safe link-review UX.
 - [ ] **v0.4 Connected workflows:** validated cross-agent installers, reproducible browser adapter, advanced PR impact and CI annotations.
 - [ ] **v1.0 Interactive review:** hosted docs/demo, approved-change interface, evaluations and verified plugin distribution.
 
-The live, interactive dashboard, fully automatic bug detection, agent-host approvals and hosted demo are **not** part of the v0.2 release. Read the [release notes](docs/release-notes-v0.2.md) for exact scope.
+The live, interactive dashboard, fully automatic bug detection, agent-host approvals and hosted demo are **not** part of the v0.3 release. Read the [v0.3 release notes](docs/release-notes-v0.3.md) for exact scope.
 
 ---
 

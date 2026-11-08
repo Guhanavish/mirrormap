@@ -29,10 +29,10 @@ def safe_audit_dir(path: Path) -> Path:
 
 def cmd_main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv and argv[0] in {"audit", "doctor", "dashboard", "baseline-diff", "install-skill", "mcp"}:
+    if argv and argv[0] in {"audit", "routes", "doctor", "dashboard", "baseline-diff", "install-skill", "mcp"}:
         from .experience import main
         return main(argv)
-    parser = argparse.ArgumentParser(prog="projectmirror", description="Read-only, evidence-linked spec drift auditing", epilog="New: audit, doctor, dashboard, baseline-diff, install-skill, mcp (run command --help for details)")
+    parser = argparse.ArgumentParser(prog="projectmirror", description="Read-only, evidence-linked spec drift auditing", epilog="New: audit, routes, doctor, dashboard, baseline-diff, install-skill, mcp (run command --help for details)")
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("init", help="create an audit manifest outside the project")
     p.add_argument("--repo", type=Path, required=True)

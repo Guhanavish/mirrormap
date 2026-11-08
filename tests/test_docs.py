@@ -32,7 +32,7 @@ class DocsTests(unittest.TestCase):
         bundle = (ROOT / "projectmirror/skill_bundle/SKILL.md").read_text(encoding="utf-8")
         self.assertEqual(main, bundle)
         self.assertIn("name: mirrormap", main)
-        self.assertIn("version: \"0.2.0\"", main)
+        self.assertIn("version: \"0.3.0\"", main)
 
     def test_generated_html_escapes_untrusted_source_text(self):
         with tempfile.TemporaryDirectory() as tmp:
