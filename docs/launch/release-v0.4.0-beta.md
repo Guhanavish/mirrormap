@@ -1,33 +1,28 @@
-# Prepared release notes — MirrorMap v0.4.0 beta
+# MirrorMap v0.4.0-beta — Evidence Atlas
 
-**This file is release copy, not a published GitHub Release.** Intended tag: v0.4.0-beta. Check the exact commit to be tagged.
+An early open-source beta of a **portable Agent Skill + Python CLI** for comparing approved requirements, observed source structure, and independently collected verification evidence. It produces a locally viewable Evidence Atlas and a review-only remediation plan.
 
-MirrorMap is a portable Agent Skill and Python CLI for evidence-backed project audits. It compares approved requirements, structural implementation evidence and observed tests, then produces an offline interactive visualization and a review-only improvement plan.
+## What is included
 
-### Shipped capabilities
+- Three independently sourced maps: intent, implementation, and verification.
+- Local interactive HTML dashboard with navigation, search, filtering, and evidence links.
+- Existing JUnit XML report import; a test can satisfy an acceptance criterion only with reviewed mapping and current-revision evidence.
+- Source-only candidate route inventory for selected Next.js and FastAPI patterns.
+- CLI, portable `SKILL.md`, Python API, experimental local MCP, and read-only GitHub Action.
+- An original 30-second illustrative walkthrough using authentic demo fixture outputs.
 
-- Interactive offline Evidence Atlas: search, filters, zoom and linked evidence.
-- Import of existing JUnit XML test reports, with independently reviewed mappings required before promoting results to acceptance-criterion evidence.
-- Quick, deep, PR, drift and visual audit modes, each bounded by available inputs.
-- Candidate route inventory for selected Next.js and FastAPI patterns.
-- Reusable read-only GitHub Action, Python CLI, portable SKILL.md and structured JSON reports.
+## Quick start
 
-### Try the bundled example
+```bash
+git clone https://github.com/Guhanavish/mirrormap.git
+cd mirrormap
+python -m projectmirror audit examples/demo-app --spec examples/demo-app/requirements.md --approved-spec --mode deep
+```
 
-    git clone https://github.com/Guhanavish/mirrormap.git
-    cd mirrormap
-    python -m projectmirror audit examples/demo-app --spec examples/demo-app/requirements.md --approved-spec --mode deep
+The example contains a **prepared fixture** specification. Do not use `--approved-spec` on your own project without actual approval. Full instructions: [Getting started](../getting-started.md).
 
-The approved-spec flag refers to the **prepared fixture**. For real projects it must reflect actual user approval.
+## Known limits
 
-### What this beta does not do
+MirrorMap does not execute application code, automatically repair features, prove arbitrary behavior through static scanning, or deploy an online dashboard. JUnit reports without reviewed traceability are not used as proof that features pass. Plugin installation on every coding-agent platform has not been independently verified. See [Security and limitations](../../SECURITY.md).
 
-No automatic application test execution, hosted dashboard, deployment, code editing, exhaustive bug detection or independently verified installation across every agent platform. See SECURITY.md for details.
-
-### Maintainer release checklist
-
-- [ ] Run GitHub CI for Python 3.10, 3.11, 3.12 and 3.13 on the exact target commit.
-- [ ] Verify source archive and build wheel from that same commit.
-- [ ] Create tag v0.4.0-beta against the intended commit.
-- [ ] Publish a **prerelease**, attach verified assets and hashes.
-- [ ] Confirm the public Release URL before publishing badges or promotional announcements.
+This is an experimental, read-only beta. Feedback and reproducible issues are welcome: https://github.com/Guhanavish/mirrormap/issues

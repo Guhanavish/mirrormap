@@ -23,21 +23,23 @@
 
 ---
 
-## Start with a real demo
+## Watch the real 30-second walkthrough
 
-[![Actual MirrorMap offline evidence dashboard, showing three unknown requirements](assets/mirrormap-interactive-atlas.webp)](docs/launch/demo-script.md)
+[![MirrorMap demonstration: three independent evidence layers, real local dashboard capture, and reviewed sample findings](assets/mirrormap-demo-preview.webp)](assets/mirrormap-30s-demo.mp4)
 
-**[Try the reproducible 30-second walkthrough](docs/launch/demo-script.md)**. The first run of the intentionally incomplete fixture reports three **unknown** requirements. After adding the supplied **reviewed sample evidence**, a separate run reports one **missing** and two **unverified** requirements. These are demonstration fixtures, not invented production bug findings.
+**[Watch or download the 30-second MP4](assets/mirrormap-30s-demo.mp4)** · [Follow the reproducible demo script](docs/launch/demo-script.md)
 
-### Install as an agent skill
+This narrated-by-captions, edited walkthrough uses the **bundled fixture** and an actual captured dashboard image. The initial audit has three **unknown** requirements; after importing **reviewed sample** links and scoped absence evidence, it reports one **missing** and two **unverified**. These are fixture results, **not** a claim of automatic production bug detection or a live uncut recording.
 
-Use the independent [Skills CLI](https://www.skills.sh/docs) with compatible agents:
+## Install as an agent skill
 
-    npx skills add Guhanavish/mirrormap
+For agents supported by the independent [Skills CLI](https://www.skills.sh/docs), the standard GitHub install syntax is:
 
-The Skills CLI requires a suitable Node.js environment; MirrorMap's own Python CLI requires Python 3.10+. The CLI's installation format is documented publicly, but this repository has **not** been certified on every agent client. Alternatively, clone the repository and use the bundled SKILL.md and Python tools directly.
+```bash
+npx skills add Guhanavish/mirrormap
+```
 
-[Quick start](docs/getting-started.md) · [Project demo](examples/README.md) · [Community launch kit](docs/launch/README.md)
+This requires a recent Node.js runtime for the installer (the Skills CLI's current minimum is Node.js 22.20+); MirrorMap's underlying Python CLI separately requires Python 3.10+. **Installation with every individual agent has not been certified**. You can always use the repository directly with `python -m projectmirror`, or install the root [`SKILL.md`](SKILL.md) manually following your agent's instructions. See the [install and integration guide](docs/getting-started.md).
 
 ## Why MirrorMap exists
 
@@ -220,11 +222,11 @@ The project welcomes reproducible reports, language-specific scanners, meaningfu
 
 [Report a bug](https://github.com/Guhanavish/mirrormap/issues/new) · [Contribute](CONTRIBUTING.md) · [Engineering standard](docs/IMPLEMENTATION_STANDARD.md) · [Changelog](CHANGELOG.md)
 
-## Share MirrorMap and help shape its next release
+## Share and improve MirrorMap
 
-The most helpful contribution is a reproducible first-audit report or a practical suggestion about the evidence model. [Use the first-audit feedback template](.github/ISSUE_TEMPLATE/first_audit.md) or [open an issue](https://github.com/Guhanavish/mirrormap/issues/new). Please never include private code, credentials, or personal logs in public issues.
+We'd rather hear about a confusing classification than collect a star that never turns into a real audit. [Try the reproducible fixture](examples/README.md), then [report your first-audit experience](.github/ISSUE_TEMPLATE/real_world_audit.md) or [open an issue](https://github.com/Guhanavish/mirrormap/issues/new).
 
-Maintainers can use the [launch kit](docs/launch/README.md) for official prerelease notes, community post drafts, topics, feedback metrics, and a four-week launch plan. These are **drafts and checklists**, not a claim that an official Release, hosted demo or social announcement exists.
+Maintainers: [launch and community kit](docs/launch/README.md) · [release checklist](docs/launch/release-v0.4.0-beta.md) · [responsible sharing templates](docs/launch/community-posts.md). The source includes a static product landing page, **not a deployed MirrorMap service**.
 
 ## Roadmap
 
