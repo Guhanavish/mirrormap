@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+<title id="title">ProjectMirror</title>
+<desc id="desc">Dark navy banner with a teal interlinked project graph and the ProjectMirror wordmark</desc>
+<defs>
+ <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#0a101d"/><stop offset="1" stop-color="#111d2d"/></linearGradient>
+ <linearGradient id="line" x1="0" x2="1"><stop stop-color="#5eead4"/><stop offset="1" stop-color="#66a7e8"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#50e3bc" stop-opacity=".15"/><stop offset="1" stop-color="#50e3bc" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="1200" height="360" rx="24" fill="url(#bg)"/>
+<circle cx="1015" cy="180" r="245" fill="url(#glow)"/>
+<g stroke="#5ce9ca" stroke-opacity=".11" fill="none"><path d="M0 72H1200M0 144H1200M0 216H1200M0 288H1200M80 0V360M160 0V360M240 0V360M320 0V360M400 0V360M480 0V360M560 0V360M640 0V360M720 0V360M800 0V360M880 0V360M960 0V360M1040 0V360M1120 0V360"/></g>
+<g fill="none" stroke="url(#line)" stroke-width="3" stroke-linecap="round"><path d="M855 98L970 164L1085 97M855 98L855 235L970 300L1085 235V97M855 235L970 164L1085 235M970 164V300" opacity=".7"/><path d="M855 98L970 164L1085 235" stroke-width="5" opacity=".95"/></g>
+<g fill="#0a1421" stroke="#64e6cd" stroke-width="4"><circle cx="855" cy="98" r="12"/><circle cx="970" cy="164" r="16"/><circle cx="1085" cy="97" r="12"/><circle cx="855" cy="235" r="12"/><circle cx="1085" cy="235" r="12"/><circle cx="970" cy="300" r="12"/></g>
+<circle cx="970" cy="164" r="6" fill="#64e6cd"/>
+<g font-family="Arial,Helvetica,sans-serif">
+ <rect x="66" y="55" width="191" height="30" rx="15" fill="#132f36" stroke="#2b756e"/>
+ <circle cx="86" cy="70" r="4" fill="#66e8cd"/>
+ <text x="104" y="75" font-size="13" fill="#a5f1e3" font-weight="700" letter-spacing="2">AGENT SKILL / OPEN SOURCE</text>
+ <text x="63" y="162" font-size="72" font-weight="800" fill="#f3f7fb" letter-spacing="-3">Project<tspan fill="#65e7cd">Mirror</tspan></text>
+ <text x="68" y="212" font-size="24" fill="#c0ccda">What you planned. What you built. What you proved.</text>
+ <text x="68" y="264" font-size="17" fill="#89a1b6">Spec drift  /  evidence-backed audits  /  human-approved fixes</text>
+ <path d="M68 293H567" stroke="#305565" stroke-width="2"/>
+ <text x="69" y="327" font-size="14" fill="#75cbba" letter-spacing="2">MAP  →  COMPARE  →  REVIEW  →  VERIFY</text>
+</g>
+</svg>

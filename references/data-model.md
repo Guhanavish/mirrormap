@@ -1,4 +1,4 @@
-# MirrorMap data model (schema v1.0)
+# ProjectMirror data model (v0.1)
 
 All artifacts use `schema_version: "1.0"`. JSON is the authoritative record; diagrams are generated views.
 

@@ -1,3 +1,16 @@
+## [0.3.0] — 2026-11-08 — Route Atlas (beta)
+
+### Added
+- Conservative source-only candidate-route discovery for Next.js App/Pages conventions and FastAPI literal route decorators, with evidence locators and explicit uncertainty labels.
+- `mirrormap routes` / `python -m projectmirror routes` command for JSON route inventories without executing the project.
+- Reusable `action.yml` composite GitHub Action, a PR workflow example, and documentation for read-only CI audit artifacts.
+- Automated tests for supported route patterns, false-positive controls, and basic CLI use.
+
+### Limitations
+- Route candidates are **not** verified HTTP endpoints and do not prove successful deployments, authentication, or correct behavior.
+- The composite action generates reports but does not import test evidence automatically or modify pull requests.
+- No hosted dashboard, automatic browser tests, or production-release claims are implied.
+
 # v0.2.0 — Evidence Atlas
 
 - Added guided one-command audits with five clearly scoped modes.

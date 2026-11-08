@@ -167,8 +167,10 @@ def ignored(rel: Path) -> bool:
 
 
 def index_repo(repo: Path, max_files: int = 12000) -> tuple[dict, dict]:
+    from .frameworks import framework_route_candidates
     repo = repo.resolve()
     nodes, evidence, scanned, skipped, errors = [], [], 0, 0, []
+    route_candidates = 0
     for root, dirs, files in os.walk(repo, followlinks=False):
         base = Path(root)
         dirs[:] = sorted(d for d in dirs if not (base / d).is_symlink() and not ignored((base / d).relative_to(repo)))
@@ -197,6 +199,9 @@ def index_repo(repo: Path, max_files: int = 12000) -> tuple[dict, dict]:
             evidence_id = f"ev.code.{identifier}"
             nodes.append({"id": node_id, "map": "implementation", "kind": "file", "title": rel.as_posix(), "locator": rel.as_posix(), "implementation_state": "present", "source_refs": [evidence_id]})
             evidence.append({"id": evidence_id, "kind": "source_file", "uri": rel.as_posix(), "content_hash": hashlib.sha256(data).hexdigest()})
+            routes = framework_route_candidates(rel, source, evidence_id)
+            nodes.extend(routes)
+            route_candidates += len(routes)
             if path.suffix.lower() == ".py":
                 try:
                     tree = ast.parse(source)
@@ -217,7 +222,8 @@ def index_repo(repo: Path, max_files: int = 12000) -> tuple[dict, dict]:
         if scanned >= max_files:
             break
     return ({"schema_version": SCHEMA, "nodes": nodes, "evidence": evidence},
-            {"scope": "repository", "coverage": "structural_only", "scanned_files": scanned, "skipped_files": skipped, "errors": errors, "max_files": max_files})
+            {"scope": "repository", "coverage": "structural_only", "scanned_files": scanned, "skipped_files": skipped, "errors": errors, "max_files": max_files, "route_candidates": route_candidates,
+             "route_limitations": "Candidates are static declarations/path conventions, not deployed behavior."})
 
 
 def compare(intent: dict, implementation: dict, verification: dict, links: dict, absence: dict, manifest_obj: dict) -> dict:

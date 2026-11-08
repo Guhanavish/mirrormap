@@ -50,3 +50,8 @@ You can also try the external [skills CLI](https://skills.sh/) with `npx skills 
 The CLI does not magically validate application behavior. Without reviewed requirement-to-implementation links, results should usually be `unknown`, not `missing`. Its suggested links are **hints only**, never findings.
 
 Learn more in [audit modes](guides/audit-modes.md), [MCP](integrations/mcp.md), [Python API](integrations/python-api.md), and [security policy](../SECURITY.md).
+
+
+## Route discovery and CI
+
+Use `python -m projectmirror routes /path/to/project` for read-only Next.js/FastAPI route **candidates**, not verified endpoints. See [the route fixture](../examples/routes-demo/README.md) and [framework limitations](guides/framework-routes.md). For pull-request inventories, see the [reusable GitHub Action](integrations/github-action.md).
