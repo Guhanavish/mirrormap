@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "confirmations": [
+    {
+      "requirement_id": "REQ.auth.recovery",
+      "reviewed": true,
+      "coverage": "exhaustive",
+      "evidence": [
+        "Demo fixture: inspected auth.py; no account recovery function or provider is configured."
+      ],
+      "explanation": "Intentionally omitted for this tiny demonstration app."
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Guhanavish/project-mirror/blob/main/schemas/map.schema.json",
+  "title": "ProjectMirror map (v1.0)",
+  "description": "Portable documentation schema. The CLI also performs explicit domain validation and does not currently depend on a JSON Schema validator.",
+  "type": "object",
+  "required": ["schema_version", "nodes"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "source": { "type": "string" },
+    "nodes": {"type": "array", "items": {"$ref": "#/$defs/node"}},
+    "evidence": {"type": "array", "items": {"$ref": "#/$defs/sourceEvidence"}}
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,160}$" },
+    "sourceEvidence": {
+      "type": "object",
+      "required": ["id", "kind", "uri"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"type": "string"},
+        "uri": {"type": "string"},
+        "content_hash": {"type": "string"}
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "map", "title"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "map": {"enum": ["intent", "implementation", "verification"]},
+        "title": {"type": "string", "minLength": 1},
+        "kind": {"type": "string"},
+        "source_refs": {"type": "array", "items": {"type": "string"}},
+        "requirement_state": {"enum": ["approved", "draft", "inferred", "conflicted", "deprecated"]},
+        "implementation_state": {"enum": ["present", "partial", "absent_confirmed", "unknown", "inaccessible"]},
+        "locator": {"type": "string"},
+        "requirement_id": {"$ref": "#/$defs/id"},
+        "result": {"enum": ["passed", "failed", "mismatch", "not_run", "inconclusive", "blocked", "stale"]},
+        "revision": {"type": ["string", "null"]},
+        "evidence": {"type": "array", "items": {"type": "string"}},
+        "criteria_ids": {"type": "array", "items": {"$ref": "#/$defs/id"}},
+        "acceptance_criteria": {"type": "array", "items": {"type": "object", "required": ["id", "statement"], "properties": {"id": {"$ref": "#/$defs/id"}, "statement": {"type": "string"}}}}
+      },
+      "allOf": [
+        {"if": {"properties": {"map": {"const": "intent"}}}, "then": {"required": ["requirement_state"]}},
+        {"if": {"properties": {"map": {"const": "verification"}}}, "then": {"required": ["requirement_id", "result", "evidence"]}}
+      ]
+    }
+  }
+}

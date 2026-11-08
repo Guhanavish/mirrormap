@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "projectmirror-skill"
+version = "0.1.0"
+description = "Evidence-backed agent skill for spec drift auditing and human-gated remediation planning"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "ProjectMirror contributors"}]
+keywords = ["agent-skill", "ai-agents", "spec-drift", "audit", "mindmap", "developer-tools"]
+classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent", "Topic :: Software Development :: Quality Assurance"]
+
+[project.scripts]
+projectmirror = "projectmirror.__main__:cmd_main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["projectmirror*"]

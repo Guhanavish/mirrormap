@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "links": [
+    {
+      "requirement_id": "REQ.auth.login",
+      "implementation_id": "impl.symbol.d4be8a67f67ce99f",
+      "basis": "reviewed",
+      "confidence": "high"
+    },
+    {
+      "requirement_id": "REQ.auth.logout",
+      "implementation_id": "impl.symbol.164cd5196c19589d",
+      "basis": "reviewed",
+      "confidence": "high"
+    }
+  ]
+}
