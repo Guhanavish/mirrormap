@@ -63,6 +63,40 @@ class GitHubActionTests(unittest.TestCase):
             file_after = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in fixture.iterdir() if p.is_file()}
             self.assertEqual(file_before, file_after)
 
+    def test_action_imports_junit_without_running_project_code(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch)
+            fixture = path / "repo"
+            fixture.mkdir()
+            (fixture / 'requirements.md').write_text((ROOT / 'examples/demo-app/requirements.md').read_text())
+            (fixture / 'auth.py').write_text('raise RuntimeError("Do not run this application")\n')
+            (fixture / 'results.xml').write_text((ROOT / 'examples/junit/sample-results.xml').read_text())
+            env = dict(os.environ, GITHUB_WORKSPACE=str(fixture), RUNNER_TEMP=str(path),
+                       GITHUB_OUTPUT=str(path / "gh-output"), MIRRORMAP_MODE='deep',
+                       MIRRORMAP_SPEC='requirements.md', MIRRORMAP_APPROVED_SPEC='true',
+                       MIRRORMAP_BASE='', MIRRORMAP_JUNIT='results.xml', MIRRORMAP_TEST_MAP='')
+            script = action_script().replace('${{ github.action_path }}', str(ROOT))
+            p = subprocess.run(['bash', '-c', script], env=env, text=True,
+                               capture_output=True, timeout=35)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            out = Path((path / 'gh-output').read_text().strip().split('=', 1)[1])
+            self.assertEqual(len(json.loads((out / 'junit-candidates.json').read_text())['cases']), 3)
+            self.assertEqual(json.loads((out / 'findings.json').read_text())['counts'], {'unknown':3})
+
+    def test_action_rejects_external_junit_paths(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            path = Path(scratch)
+            fixture = path / 'repo';fixture.mkdir()
+            outside = path / 'outside.xml';outside.write_text('<testsuite/>')
+            env = dict(os.environ, GITHUB_WORKSPACE=str(fixture), RUNNER_TEMP=str(path),
+                       GITHUB_OUTPUT=str(path / 'gh-output'), MIRRORMAP_MODE='quick',
+                       MIRRORMAP_SPEC='', MIRRORMAP_APPROVED_SPEC='false',
+                       MIRRORMAP_BASE='', MIRRORMAP_JUNIT=str(outside), MIRRORMAP_TEST_MAP='')
+            script = action_script().replace('${{ github.action_path }}', str(ROOT))
+            p = subprocess.run(['bash','-c',script],env=env,text=True,capture_output=True,timeout=35)
+            self.assertEqual(p.returncode,2)
+            self.assertIn('within GITHUB_WORKSPACE',p.stderr)
+
     def test_invalid_approved_spec_fails_closed(self):
         with tempfile.TemporaryDirectory() as scratch:
             path = Path(scratch)

@@ -115,42 +115,12 @@ def baseline_comparison(out: Path, baseline: Path) -> dict:
     return result
 
 
-def _html_report(out: Path, title: str, findings: dict, meta: dict) -> Path:
-    counts = findings.get("counts", {})
-    def e(s: Any) -> str:
-        return html.escape(str(s), quote=True)
-    status_blocks = "".join(f'<section class="stat"><b>{int(n)}</b><span>{e(k).upper()}</span></section>'
-                            for k, n in sorted(counts.items())) or '<section class="stat"><b>0</b><span>CONFIRMED GAPS</span></section>'
-    items = "".join('<tr><td><code>' + e(f.get("id", "")) + '</code></td><td><span class="pill">' +
-                    e(f.get("classification", "")) + '</span></td><td>' + e(f.get("title", "")) +
-                    '</td><td>' + e(f.get("reason", "")) + '</td></tr>' for f in findings.get("findings", []))
-    if not items:
-        items = '<tr><td colspan="4">No classified requirements yet. Supply a reviewed specification to start a gap audit.</td></tr>'
-    body = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'none';">
-<title>MirrorMap | {e(title)}</title><style>
-:root{{color-scheme:dark;font-family:ui-sans-serif,system-ui,Arial,sans-serif;background:#08131b;color:#e9f4f1}}
-*{{box-sizing:border-box}}body{{margin:0;line-height:1.55;background:radial-gradient(ellipse at 65% 0%,#153d42 0%,#08131b 53%)}}
-.container{{max-width:1100px;margin:auto;padding:40px 24px 72px}}
-nav{{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #29424a;padding-bottom:20px}}
-.brand{{font-weight:800;letter-spacing:-.06em;font-size:24px}}.brand span{{color:#69dfbf}}
-.muted{{color:#9eb5b7}}h1{{font-size:clamp(36px,6vw,70px);line-height:1.08;letter-spacing:-.045em;margin:80px 0 16px}}
-.kicker{{color:#69dfbf;letter-spacing:.22em;font-size:12px;font-weight:700}}
-.grid{{display:flex;flex-wrap:wrap;gap:12px;margin:38px 0 48px}}.stat{{background:#12232b;border:1px solid #28434a;border-radius:12px;padding:18px;flex:1;min-width:145px}}
-.stat b{{display:block;font-size:38px;color:#e7f8ef}}.stat span{{font-size:11px;letter-spacing:.15em;color:#98c5bf}}
-.panel{{background:#0d1e26;border:1px solid #28414a;border-radius:15px;overflow:auto}}table{{border-collapse:collapse;width:100%;min-width:750px}}
-th,td{{padding:14px 16px;border-bottom:1px solid #253d44;text-align:left;vertical-align:top}}th{{color:#85d6c2;font-size:12px;letter-spacing:.08em}}
-tr:last-child td{{border-bottom:0}}code{{color:#bbf3df}}.pill{{border:1px solid #4b696c;background:#20323a;border-radius:100px;padding:4px 9px;font-size:12px}}
-footer{{margin-top:32px;color:#a9bfc1;font-size:13px}}a{{color:#8beac9}}
-</style></head><body><div class="container"><nav><div class="brand">◈ Mirror<span>Map</span></div><div class="muted">EVIDENCE ATLAS / REPORT</div></nav>
-<header><h1>{e(title)}</h1><p class="kicker">INTENT &nbsp; / &nbsp; IMPLEMENTATION &nbsp; / &nbsp; VERIFICATION</p>
-<p class="muted">Project: {e(meta.get('project',{}).get('repo','unknown'))}<br>Revision: {e(meta.get('project',{}).get('revision') or 'unversioned')}<br>
-This audit is limited to available, reviewed evidence. Unknown does not mean missing.</p></header>
-<div class="grid">{status_blocks}</div><h2>Requirement findings</h2><div class="panel"><table><thead><tr><th>ID</th><th>STATUS</th><th>REQUIREMENT</th><th>RATIONALE</th></tr></thead><tbody>{items}</tbody></table></div>
-<footer>MirrorMap generated this report without changing the inspected project. No fix is approved by this document.</footer></div></body></html>'''
-    file = out / "dashboard.html"
-    file.write_text(body, encoding="utf-8")
-    return file
+def _html_report(out: Path, title: str, findings: dict, meta: dict,
+                 implementation: dict | None = None,
+                 verification: dict | None = None) -> Path:
+    """Render the standalone interactive evidence atlas, retaining v0.3 API."""
+    from .dashboard import write_dashboard
+    return write_dashboard(out, title, findings, meta, implementation, verification)
 
 
 def audit_project(repo: str | Path, spec: str | Path | None = None,
@@ -160,7 +130,9 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
                   links: str | Path | None = None,
                   verification: str | Path | None = None,
                   absence: str | Path | None = None,
-                  max_files: int | None = None) -> dict:
+                  max_files: int | None = None,
+                  junit_sources: list[str | Path] | None = None,
+                  test_map: str | Path | None = None) -> dict:
     """Run the read-only audit pipeline. Return generated artifacts and counts.
 
     No source code is run. A requirement with no reviewed link is UNKNOWN.
@@ -199,6 +171,24 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
         m["limitations"].append("No requirements supplied; structural inventory only")
         save(target / "audit-manifest.json", m)
     v = load(_safe_external_file(project, verification, "Verification evidence")) if verification else {"schema_version": SCHEMA, "nodes": []}
+    if test_map and not junit_sources:
+        raise AuditError("--test-map requires at least one --junit source")
+    if junit_sources:
+        from .evidence import collect_junit
+        mapping = load(_safe_external_file(project, test_map, "Reviewed JUnit mapping")) if test_map else None
+        collected, imported = collect_junit(junit_sources, manifest_revision=m['project']['revision'],
+                                            intent=i, reviewed_mapping=mapping)
+        save(target / "junit-candidates.json", collected)
+        if mapping is None:
+            m["limitations"].append("JUnit cases imported as UNLINKED candidate evidence; no reviewed test mapping provided")
+        else:
+            v = {"schema_version": SCHEMA, "nodes": v.get('nodes', []) + imported['nodes']}
+            from .core import validate_nodes
+            validate_nodes(v, 'verification-map', 'verification')
+            m["limitations"].append("JUnit mapping declares current revision and criteria; test run provenance remains reviewer asserted")
+        save(target / "audit-manifest.json", m)
+    if v['nodes']:
+        save(target / "verification-map.json", v)
     l = load(_safe_external_file(project, links, "Reviewed links")) if links else {"links": []}
     a = load(_safe_external_file(project, absence, "Absence evidence")) if absence else {"confirmations": []}
     findings = compare(i, implementation, v, l, a, m)
@@ -208,7 +198,7 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
     save(target / "plan.json", plan)
     (target / "remediation-plan.md").write_text(markdown_plan(plan), encoding="utf-8")
     (target / "mindmap.mmd").write_text(render(findings), encoding="utf-8")
-    _html_report(target, "Project audit", findings, m)
+    _html_report(target, "Project audit", findings, m, implementation, v)
     if mode == "pr":
         save(target / "pr-scope.json", m["pr_scope"])
     if mode == "drift":
@@ -271,6 +261,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--verification", type=Path, help="real test/browser observations")
     p.add_argument("--absence", type=Path, help="reviewed, scoped absence records")
     p.add_argument("--max-files", type=int, default=None)
+    p.add_argument("--junit", type=Path, action="append", default=[], help="existing JUnit XML file or directory; never runs tests")
+    p.add_argument("--test-map", type=Path, help="explicitly reviewed test-to-criteria mapping JSON for JUnit evidence")
+    p = commands.add_parser("evidence", help="collect existing JUnit XML reports into an initialized audit folder")
+    p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--junit", type=Path, action="append", required=True)
+    p.add_argument("--test-map", type=Path)
     p = commands.add_parser("routes", help="list static framework route candidates (never verifies endpoints)")
     p.add_argument("repo", type=Path)
     p.add_argument("--max-files", type=int, default=5000)
@@ -289,7 +285,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "audit":
             res = audit_project(args.repo, args.spec, args.out, args.mode, spec_approved=args.approved_spec,
                                 base=args.base, baseline=args.baseline, links=args.links, verification=args.verification,
-                                absence=args.absence, max_files=args.max_files)
+                                absence=args.absence, max_files=args.max_files,
+                                junit_sources=args.junit, test_map=args.test_map)
+        elif args.command == "evidence":
+            from .evidence import collect_junit
+            out = args.out.expanduser().resolve()
+            m = load(out / 'audit-manifest.json')
+            ensure_output(Path(m['project']['repo']), out)
+            mapping = load(args.test_map) if args.test_map else None
+            inventory, verification = collect_junit(args.junit, manifest_revision=m['project']['revision'],
+                                                     intent=load(out / 'intent-map.json'), reviewed_mapping=mapping)
+            save(out / 'junit-candidates.json', inventory)
+            if mapping is not None:
+                prior = load(out / 'verification-map.json') if (out / 'verification-map.json').is_file() else {'schema_version': SCHEMA, 'nodes': []}
+                combined = {'schema_version': SCHEMA, 'nodes': prior['nodes'] + verification['nodes']}
+                from .core import validate_nodes
+                validate_nodes(combined, 'verification-map', 'verification')
+                save(out / 'verification-map.json', combined)
+            res = {'cases': len(inventory['cases']), 'mapped': inventory['mapped_cases'],
+                   'candidates_path': str(out / 'junit-candidates.json'),
+                   'next_step': 'Run diff, plan, render and dashboard to refresh outputs.'}
         elif args.command == "routes":
             repo = _repo_path(args.repo)
             if args.max_files < 1:
@@ -304,7 +319,9 @@ def main(argv: list[str] | None = None) -> int:
             out = args.out.expanduser().resolve()
             m = load(out / "audit-manifest.json")
             ensure_output(Path(m["project"]["repo"]), out)
-            res = {"path": str(_html_report(out, "Project audit", load(out / "findings.json"), m))}
+            i = load(out / 'implementation-map.json') if (out / 'implementation-map.json').is_file() else None
+            v = load(out / 'verification-map.json') if (out / 'verification-map.json').is_file() else None
+            res = {"path": str(_html_report(out, "Project audit", load(out / "findings.json"), m, i, v))}
         elif args.command == "baseline-diff":
             out = args.out.expanduser().resolve()
             m = load(out / "audit-manifest.json")

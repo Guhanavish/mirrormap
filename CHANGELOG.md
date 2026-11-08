@@ -1,3 +1,19 @@
+## [0.4.0] — 2026-11-08 — Evidence Atlas (beta)
+
+### Added
+- Automatic read-only collection of **existing JUnit XML** reports, with bounded parsing and SHA-256 provenance.
+- Explicitly reviewed testcase-to-acceptance-criterion mappings; missing mappings never become verified evidence.
+- Interactive, standalone three-lane graph in `dashboard.html` with search, status filters, zoom, keyboard selection, and evidence details.
+- New `projectmirror evidence` command to import reports into an existing audit folder.
+- Optional `junit` and `test-map` inputs for the reusable GitHub Action.
+- Reproducible JUnit fixture, documentation and regression tests.
+
+### Safety
+- No tests executed by the importer or dashboard.
+- Mapping revision equality and valid criterion IDs required to promote evidence.
+- No remote scripts, telemetry, network dependency or code edits.
+- XML DTDs/entities rejected, size and count limits imposed, raw tracebacks excluded.
+
 ## [0.3.0] — 2026-11-08 — Route Atlas (beta)
 
 ### Added

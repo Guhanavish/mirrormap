@@ -55,3 +55,14 @@ Learn more in [audit modes](guides/audit-modes.md), [MCP](integrations/mcp.md), 
 ## Route discovery and CI
 
 Use `python -m projectmirror routes /path/to/project` for read-only Next.js/FastAPI route **candidates**, not verified endpoints. See [the route fixture](../examples/routes-demo/README.md) and [framework limitations](guides/framework-routes.md). For pull-request inventories, see the [reusable GitHub Action](integrations/github-action.md).
+
+
+## Import existing test evidence and explore the interactive atlas
+
+```bash
+python -m projectmirror audit ./examples/demo-app \
+  --spec ./examples/demo-app/requirements.md --approved-spec \
+  --mode deep --junit ./examples/junit/sample-results.xml
+```
+
+`junit-candidates.json` will contain imported outcomes without claiming the test validates any requirement. Supplying `--test-map` is possible only after a reviewer checks exact criterion IDs and current revision. See [JUnit evidence guide](guides/junit-evidence.md). Open `dashboard.html` to search, filter, zoom and examine the three-lane map, or read [interactive atlas guide](guides/interactive-atlas.md).

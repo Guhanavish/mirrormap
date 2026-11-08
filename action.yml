@@ -19,6 +19,14 @@ inputs:
     description: 'Mark true ONLY if the repository owner has actually approved this specification.'
     required: false
     default: 'false'
+  junit:
+    description: 'Optional existing JUnit XML report (or directory), within checked-out workspace. Does not execute tests.'
+    required: false
+    default: ''
+  test-map:
+    description: 'Optional reviewer-approved JUnit-to-criteria mapping JSON, used only with junit input.'
+    required: false
+    default: ''
   base:
     description: 'Optional Git ref for PR changed-file context; requires sufficient git history.'
     required: false
@@ -38,6 +46,8 @@ runs:
         MIRRORMAP_SPEC: ${{ inputs.spec }}
         MIRRORMAP_APPROVED_SPEC: ${{ inputs.approved-spec }}
         MIRRORMAP_BASE: ${{ inputs.base }}
+        MIRRORMAP_JUNIT: ${{ inputs.junit }}
+        MIRRORMAP_TEST_MAP: ${{ inputs.test-map }}
       run: |
         set -euo pipefail
         : "${GITHUB_WORKSPACE:?This action needs a checked-out project}"
@@ -65,6 +75,35 @@ runs:
         fi
         if [[ -n "$MIRRORMAP_BASE" ]]; then
           args+=(--base "$MIRRORMAP_BASE")
+        fi
+        # Evidence inputs are workspace-scoped. Reports are imported, NEVER run.
+        if [[ -n "${MIRRORMAP_JUNIT:-}" ]]; then
+          case "$MIRRORMAP_JUNIT" in
+            /*) junit_path="$MIRRORMAP_JUNIT" ;;
+            *) junit_path="$GITHUB_WORKSPACE/$MIRRORMAP_JUNIT" ;;
+          esac
+          junit_path="$(realpath "$junit_path")"
+          case "$junit_path" in
+            "$GITHUB_WORKSPACE"/*) ;;
+            *) echo 'JUnit input must be within GITHUB_WORKSPACE' >&2; exit 2 ;;
+          esac
+          args+=(--junit "$junit_path")
+        fi
+        if [[ -n "${MIRRORMAP_TEST_MAP:-}" ]]; then
+          if [[ -z "${MIRRORMAP_JUNIT:-}" ]]; then
+            echo 'test-map requires junit input' >&2
+            exit 2
+          fi
+          case "$MIRRORMAP_TEST_MAP" in
+            /*) mapping_path="$MIRRORMAP_TEST_MAP" ;;
+            *) mapping_path="$GITHUB_WORKSPACE/$MIRRORMAP_TEST_MAP" ;;
+          esac
+          mapping_path="$(realpath "$mapping_path")"
+          case "$mapping_path" in
+            "$GITHUB_WORKSPACE"/*) ;;
+            *) echo 'Test mapping must be within GITHUB_WORKSPACE' >&2; exit 2 ;;
+          esac
+          args+=(--test-map "$mapping_path")
         fi
         python3 -m projectmirror "${args[@]}" > "$report/summary.json"
         echo "MirrorMap report stored at: $report"
