@@ -28,7 +28,8 @@ jobs:
           cd "${RUNNER_TEMP}/mirrormap-skills-install"
           npx --yes skills@1.7.6 add Guhanavish/mirrormap \
             --skill mirrormap -a codex --copy -y
-          skill_file=$(find . -type f -name SKILL.md -print -quit)
-          test -n "$skill_file"
-          grep -q '^name: project-mirror' "$skill_file"
+          skill_file=".agents/skills/mirrormap/SKILL.md"
+          test -s "$skill_file"
+          grep -Eq 'ProjectMirror|MirrorMap' "$skill_file"
+          head -n 8 "$skill_file"
           echo "Installed skill: $skill_file"
