@@ -23,6 +23,22 @@
 
 ---
 
+## Start with a real demo
+
+[![Actual MirrorMap offline evidence dashboard, showing three unknown requirements](assets/mirrormap-interactive-atlas.webp)](docs/launch/demo-script.md)
+
+**[Try the reproducible 30-second walkthrough](docs/launch/demo-script.md)**. The first run of the intentionally incomplete fixture reports three **unknown** requirements. After adding the supplied **reviewed sample evidence**, a separate run reports one **missing** and two **unverified** requirements. These are demonstration fixtures, not invented production bug findings.
+
+### Install as an agent skill
+
+Use the independent [Skills CLI](https://www.skills.sh/docs) with compatible agents:
+
+    npx skills add Guhanavish/mirrormap
+
+The Skills CLI requires a suitable Node.js environment; MirrorMap's own Python CLI requires Python 3.10+. The CLI's installation format is documented publicly, but this repository has **not** been certified on every agent client. Alternatively, clone the repository and use the bundled SKILL.md and Python tools directly.
+
+[Quick start](docs/getting-started.md) · [Project demo](examples/README.md) · [Community launch kit](docs/launch/README.md)
+
 ## Why MirrorMap exists
 
 A repository can have a login page and still lack a working login flow. A test can exist without testing the acceptance criteria. And an AI agent can overlook unfinished work because the code itself is the only thing it inspected.
@@ -203,6 +219,12 @@ Read [SECURITY.md](SECURITY.md) and [the evidence model](references/data-model.m
 The project welcomes reproducible reports, language-specific scanners, meaningful CI examples, and integration testing. If you propose a new agent adapter, verify the exact install path and tool capabilities first.
 
 [Report a bug](https://github.com/Guhanavish/mirrormap/issues/new) · [Contribute](CONTRIBUTING.md) · [Engineering standard](docs/IMPLEMENTATION_STANDARD.md) · [Changelog](CHANGELOG.md)
+
+## Share MirrorMap and help shape its next release
+
+The most helpful contribution is a reproducible first-audit report or a practical suggestion about the evidence model. [Use the first-audit feedback template](.github/ISSUE_TEMPLATE/first_audit.md) or [open an issue](https://github.com/Guhanavish/mirrormap/issues/new). Please never include private code, credentials, or personal logs in public issues.
+
+Maintainers can use the [launch kit](docs/launch/README.md) for official prerelease notes, community post drafts, topics, feedback metrics, and a four-week launch plan. These are **drafts and checklists**, not a claim that an official Release, hosted demo or social announcement exists.
 
 ## Roadmap
 

@@ -1,39 +1,13 @@
-# Publish and grow ProjectMirror
+# Publishing and growing MirrorMap
 
-This is a release checklist, not a guarantee of traffic or growth.
+This file supersedes earlier, out-of-date v0.2 launch notes. The current software is **v0.4.0 beta**, and a badge in the README is not proof of an official GitHub Release.
 
-## GitHub repository setup
+The prepared distribution materials are organized in [the launch kit](launch/README.md).
 
-- **Repository:** `project-mirror`
-- **Visibility:** public
-- **Default branch:** `main`
-- **Short description:** `Evidence-backed AI agent skill to map requirements, detect spec drift, and plan user-approved fixes.`
-- **Suggested topics:** `agent-skills`, `ai-agents`, `spec-drift`, `software-audit`, `mindmap`, `developer-tools`, `python`, `coding-agent`, `human-in-the-loop`, `open-source`
-- **Creator website:** `https://guhanavish.vercel.app/` (portfolio; not a hosted MirrorMap dashboard).
-- **Product landing-page source:** `site/index.html` (not published until Pages or another host is configured).
-- **License:** MIT (included).
+- [Repository metadata](launch/metadata.md): About description, topics, homepage and Discussions.
+- [Prepared prerelease notes](launch/release-v0.4.0-beta.md): create a real release only after verifying the exact commit.
+- [Real sample walkthrough](launch/demo-script.md): reproducible commands and actual classifications.
+- [Ready-to-adapt social drafts](launch/community-posts.md): Show HN, DEV, Reddit, Product Hunt and a short developer post.
+- [First-month plan](launch/30-day-plan.md) and [measurement](launch/measuring.md): prioritize useful audits and feedback.
 
-## Publish checklist
-
-1. Run `python -m unittest discover -s tests -v` and `python -m compileall -q projectmirror tests`.
-2. Create a new **public** GitHub repository named `project-mirror`; leave it empty if pushing the included project directly. Do not put it in an unrelated existing repository.
-3. Publish the repository files and check that the root README, skill metadata, and workflow appear correctly.
-4. Check the Actions tab: wait for all Python matrix jobs to finish; repair any platform-version failures before claiming green CI.
-5. Add the description and topics, enable Discussions if you want community questions, and configure vulnerability reporting.
-6. Cut a pre-release tag `v0.2.0` after successful CI; attach changelog notes and a tested ZIP if useful.
-7. Share a small, reproducible demo and explanation of how `unknown` differs from `missing`.
-8. Invite issues labeled `good first issue`, showing where language parsers or adapters can contribute.
-
-## Launch message template
-
-> **MirrorMap v0.2.0** — a portable Agent Skill + Python CLI for evidence-backed spec drift auditing. Instead of asking an agent to guess what's missing, it keeps approved intent separate from code and test evidence, generates a traceable mindmap, and stops before any project edits. The first release is deliberately read-only and experimental. Feedback and scanner contributions welcome.
-
-## Positioning, without misleading claims
-
-Emphasize: independent requirement maps, deterministic classification, explainable unknowns, human approval, open formats, stdlib Python core.
-
-Avoid: “finds every bug,” “fully autonomous,” “zero errors,” “production-certified,” “all agents supported out of the box,” and “automatically patches your live deployment.” Those would not be accurate for the current release.
-
-## Known first-release limitations
-
-The CLI performs **structural** scans. Reviewed mappings, absent-feature confirmations and runtime verification records are separate inputs; it cannot produce reliable full functional audit results from a bare source scan alone. Some scanners are heuristics, schema files are documentation contracts rather than complete runtime validators, and the built-in receipt checker is not an authorization system. The host agent must enforce approval before implementation.
+**Administrative limits:** The connected GitHub file tool cannot edit About metadata, topics, Discussions, or create GitHub Release objects. Those require an authorized GitHub settings/release interface. The static site source is not a deployed MirrorMap web service. No external community posts are published automatically.
