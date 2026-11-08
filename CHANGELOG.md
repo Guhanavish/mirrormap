@@ -1,3 +1,10 @@
+# v0.2.0 — Evidence Atlas
+
+- Added guided one-command audits with five clearly scoped modes.
+- Added offline HTML reports, local MCP integration, Python SDK, candidate links, drift and PR views.
+- Added non-overwriting skill installer, help guides, CI example and distinct MirrorMap brand design.
+- Kept the evidence and user approval safety boundaries unchanged.
+
 # Changelog
 
 All notable changes are documented here. This project is in early beta; no production-stability guarantee is implied.

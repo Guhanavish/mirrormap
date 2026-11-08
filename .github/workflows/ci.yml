@@ -1,11 +1,10 @@
-name: CI
+name: Tests and package
 on:
   push:
   pull_request:
-
+  workflow_dispatch:
 permissions:
   contents: read
-
 jobs:
   tests:
     name: Python ${{ matrix.python-version }}
@@ -16,6 +15,8 @@ jobs:
         python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -23,5 +24,15 @@ jobs:
         run: python -m compileall -q projectmirror tests
       - name: Run unit and integration tests
         run: python -m unittest discover -s tests -v
-      - name: CLI smoke check
-        run: python -m projectmirror --help
+      - name: CLI smoke checks
+        run: |
+          python -m projectmirror --help
+          python -m projectmirror doctor
+          python -m projectmirror audit --help
+      - name: Build package
+        run: python -m pip wheel --no-deps . --wheel-dir dist
+      - name: Check skill and generated HTML
+        run: |
+          python -m projectmirror audit examples/demo-app --out "${RUNNER_TEMP}/mirrormap-ci"
+          test -s "${RUNNER_TEMP}/mirrormap-ci/dashboard.html"
+          test -s "${RUNNER_TEMP}/mirrormap-ci/audit-report.md"

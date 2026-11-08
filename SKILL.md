@@ -1,13 +1,13 @@
 ---
-name: project-mirror
+name: mirrormap
 description: Audit software projects against approved requirements using independent intent, implementation, and verification maps. Detect missing or broken features, specification drift, and unverified behavior; visualize findings and create a human-reviewed remediation plan. Use when asked to map a project, audit an app, find missing features, compare code to a spec, investigate drift, or plan safe fixes.
 license: MIT
 compatibility: Requires Python 3.10+ for the bundled optional audit CLI and read access to the project. Runtime and browser checks require additional tools provided by the host agent.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
-# ProjectMirror — Project intelligence and drift auditing
+# MirrorMap — Evidence Atlas for project intelligence
 
 **Primary constraint:** An audit request grants permission to *inspect*, not to edit the target project. Never modify application code, tests, docs, configuration, dependencies, environments, or deployments without explicit, specific user approval. The CLI stores audit artifacts **outside** the project.
 
@@ -26,6 +26,32 @@ metadata:
 3. **Verification Map** — actually observed results of tests, browser flows, API calls, logs and probes, including the revision and evidence for every result. Never turn an unexecuted check into a pass.
 
 Use stable IDs (`REQ.auth.login`, `impl.file.*`, `verify.auth.login`) and explicit reviewed requirement-to-implementation links. The human-readable Mermaid mindmap is **rendered from** the graph, not an authority itself. See [schema and evidence rules](references/data-model.md).
+
+## New: choose a scoped audit mode (v0.2)
+
+Prefer the guided CLI for initial analysis, then use the lower-level steps below when reviewing evidence:
+
+```bash
+python -m projectmirror doctor
+python -m projectmirror audit /path/to/repo --mode quick
+python -m projectmirror audit /path/to/repo --spec /path/to/requirements.md --mode deep
+```
+
+The default specification state is **draft**. Use `--approved-spec` only if the user has explicitly approved the requirements; an audit request by itself is not approval of an inferred specification.
+
+| Mode | Capability and limit |
+|---|---|
+| `quick` | Small bounded structural inventory; no semantic assertion by default |
+| `deep` | Larger structural scan, unreviewed candidate link hints; evidence required for conclusions |
+| `pr` | Git changed-file context with `--base`; not proof of regression impact |
+| `drift` | Compare two reviewed audits with `--baseline`; changes are not automatic regressions |
+| `visual` | Import previously observed browser evidence; does not launch a browser by itself |
+
+Every guided audit produces `dashboard.html`, Mermaid, JSON findings, Markdown report, and a **review-only plan**. Never treat generated candidate links as reviewed requirement mappings. See `docs/getting-started.md` and `docs/guides/audit-modes.md` when using the source checkout.
+
+### MCP / agent integration
+
+If the agent uses the experimental MCP server, configure `MIRRORMAP_ALLOWED_ROOTS` to restrict inspection to trusted project directories. MCP tools are read-only with respect to inspected source. They do not authorize edits. If the server is not available, use the portable CLI workflow directly; do not pretend tools exist.
 
 ## 2. Read-only CLI workflow
 

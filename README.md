@@ -1,258 +1,176 @@
 <div align="center">
 
-<img src="assets/projectmirror-banner.svg" alt="ProjectMirror — know what your software promises, prove what it delivers" width="100%" />
+<img src="assets/mirrormap-atlas.svg" width="100%" alt="MirrorMap — evidence over assumption. Three independently grounded maps converge into a human-gated audit." />
 
-<br />
+<br>
 
-**A project isn't finished just because the code exists.**
+**A portable project intelligence skill that separates what you meant, what you built, and what you actually verified.**
 
-Turn approved requirements, real implementation evidence, and observed tests into a **traceable project map**—then find the gaps without letting your agent invent them.
+[![Tests](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml/badge.svg)](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-29423C?logo=python&logoColor=white)](pyproject.toml)
+[![MIT](https://img.shields.io/badge/License-MIT-29423C)](LICENSE)
+[![Release](https://img.shields.io/badge/Version-v0.2.0_beta-2D6254)](CHANGELOG.md)
+[![Agent Skill](https://img.shields.io/badge/Open_Agent_Skill-SKILL.md-A5D9B4)](SKILL.md)
 
-<br />
+[![Start Auditing](https://img.shields.io/badge/START_AUDITING-Quick_Start-9AE0BC?style=for-the-badge&logo=python&logoColor=14231C)](#get-a-result-in-one-command)
+[![Read the Guide](https://img.shields.io/badge/READ_THE_GUIDE-Documentation-18313A?style=for-the-badge&logo=readthedocs&logoColor=white)](docs/getting-started.md)
+[![Creator](https://img.shields.io/badge/CREATOR-Visit_Website-18313A?style=for-the-badge&logo=vercel&logoColor=white)](https://guhanavish.vercel.app/)
+[![Contribute](https://img.shields.io/badge/CONTRIBUTE-Open_Source-18313A?style=for-the-badge&logo=github&logoColor=white)](CONTRIBUTING.md)
 
-[![CI](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml/badge.svg)](https://github.com/Guhanavish/mirrormap/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-1E293B?logo=python&logoColor=white)](https://www.python.org/)
-[![Agent Skills](https://img.shields.io/badge/Agent_Skills-portable-124D4D)](https://agentskills.io/specification)
-[![License: MIT](https://img.shields.io/badge/License-MIT-0A9C83)](LICENSE)
-[![Status](https://img.shields.io/badge/Release-0.1.0_Beta-414978)](#roadmap)
-
-### Explore MirrorMap
-
-[![Creator Website](https://img.shields.io/badge/Creator's_Website-Visit-0B766E?style=for-the-badge&logo=vercel&logoColor=white)](https://guhanavish.vercel.app/)
-[![Quick Start](https://img.shields.io/badge/Quick_Start-Try_MirrorMap-18343A?style=for-the-badge&logo=rocket&logoColor=white)](#-quick-start)
-[![Documentation](https://img.shields.io/badge/Documentation-Read_the_Guide-18343A?style=for-the-badge&logo=readthedocs&logoColor=white)](references/workflow.md)
-[![Report a Bug](https://img.shields.io/badge/Report_a_Bug-Open_an_Issue-18343A?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Guhanavish/mirrormap/issues/new)
-[![Contribute](https://img.shields.io/badge/Contribute-Get_Involved-18343A?style=for-the-badge&logo=git&logoColor=white)](CONTRIBUTING.md)
-
-[**How it works**](#-how-it-works) · [**Why it's different**](#-why-projectmirror) · [**Roadmap**](#-roadmap) · [**See examples**](examples/README.md)
-
-<sub>Creator's Website links to the author's portfolio, not a hosted MirrorMap dashboard.</sub>
+[**Why it exists**](#why-mirrormap-exists) · [**How it works**](#the-evidence-atlas) · [**Audit modes**](#one-engine-five-views) · [**Integrations**](#meet-your-agent-where-it-works) · [**Roadmap**](#roadmap)
 
 </div>
 
 ---
 
-## The problem nobody talks about
+## Why MirrorMap exists
 
-Your PRD says users can reset their passwords. Your codebase has an auth folder. Your agent says, *“Looks good!”* But no recovery flow exists—or perhaps it exists and silently fails.
+A repository can have a login page and still lack a working login flow. A test can exist without testing the acceptance criteria. And an AI agent can overlook unfinished work because the code itself is the only thing it inspected.
 
-**ProjectMirror helps agents ask a better question: _What can we prove?_**
+**MirrorMap keeps three kinds of knowledge separate.** It asks what the product promises, what code demonstrably exists, and what independent observations prove—without treating missing search hits as missing features.
 
-```text
-       APPROVED REQUIREMENTS              CODE & ARCHITECTURE
-               │                                 │
-          Intent Map                      Implementation Map
-               │                                 │
-               └───────────┬─────────────────────┘
-                           │
-                    Reviewed links
-                           │
-                    Verification Map  ← real tests / probes
-                           │
-                 Deterministic comparison
-                           │
-             Findings • Traceability • Mindmap
-                           │
-                    Reviewable plan
-                           │
-                    ⛔ USER APPROVAL
-                           │
-             External coding agent executes
-                    approved scope only
-                           │
-                   Re-test and re-audit
+| Most code summaries | MirrorMap's approach |
+|---|---|
+| Tell you what files exist | Link stable requirements to source evidence |
+| Treat presence as implementation | Keep tests and acceptance criteria separate |
+| Guess missing features | Use `unknown` until scoped absence is reviewed |
+| Offer free-form fixes | Produce a review-only, digest-bound plan |
+| Depend on one agent | Provide a portable skill, CLI, SDK, and experimental MCP |
+
+## The Evidence Atlas
+
+```mermaid
+flowchart LR
+    S["Approved requirements"] --> I["01 · Intent"]
+    R["Repository inventory"] --> M["02 · Implementation"]
+    T["Real observations"] --> V["03 · Verification"]
+    I --> C["Evidence-linked comparison"]
+    M --> C
+    V --> C
+    C --> G["Mindmap · Findings · Plan"]
+    G --> A{"User approves exact scope?"}
+    A -->|No| X["Stop or revise"]
+    A -->|Yes| H["External coding agent acts"]
+    H --> Z["Re-test and re-audit"]
+    classDef first fill:#173a36,stroke:#83c9a9,color:#e9f5ef;
+    class I,M,V,C,G first;
 ```
+
+Every conclusion needs a trail back to source, approved requirements, or verified observations. The pretty mindmap is simply a view of that underlying JSON model.
 
 > [!IMPORTANT]
-> **No surprise edits.** The bundled CLI **never changes the inspected project** and never executes its code. Project edits, test execution, or deployment must be handled by a separately authorized host agent. A checked box or self-generated receipt is **not** permission to change files.
+> **Source scanning is not functional testing.** MirrorMap's core does **not** execute the project's application code, automatically change files, or approve its own remediation. Browser tests and execution require separate host capabilities and permission. v0.2 is a beta, not an exhaustive bug detector.
 
-## ✨ Why ProjectMirror?
+## Get a result in one command
 
-| | Generic codebase summary | ProjectMirror |
-|---|---|---|
-| Understands structure | Lists files and features | Builds a stable, evidence-linked implementation inventory |
-| Understands intent | Often guesses from code | Keeps approved requirements **independent** of implementation |
-| Detects gaps | Free-form guesses | Classifies findings from explicit reviewed links and evidence |
-| Handles uncertainty | Tends to say “missing” | Says **unknown** when absence isn't established |
-| Understands verification | May conflate tests with quality | Requires current-revision, criterion-linked evidence for **complete** |
-| Prevents unapproved work | Prompt-only | Plan-first workflow and an explicit external approval boundary |
-| Shows results | Large prose reports | JSON findings, Markdown reports, and Mermaid visualization |
-
-### Three maps. One trustworthy conversation.
-
-<table>
-<tr><th>01 · Intent</th><th>02 · Implementation</th><th>03 · Verification</th></tr>
-<tr><td><b>What should exist?</b><br/>Approved user requirements, acceptance criteria, provenance.</td><td><b>What exists?</b><br/>Files, symbols, manually reviewed components and links.</td><td><b>What demonstrably works?</b><br/>Test/probe outcomes tied to requirements and the current revision.</td></tr>
-</table>
-
-**The mindmap is the view, not the database.** Canonical JSON with stable identifiers is what lets you reproduce an audit, inspect the evidence, and compare snapshots. A Mermaid graph makes that data easy to navigate.
-
-## 🚀 Quick start
-
-**Requirements:** Python 3.10+, Git recommended. No runtime Python dependencies. The basic scan is structural and intentionally read-only.
+**Requires Python 3.10+**. The runtime uses the standard library. Run directly from the repository:
 
 ```bash
-# Clone the repository after it is published
 git clone https://github.com/Guhanavish/mirrormap.git
 cd mirrormap
-
-# View the skill and available commands
-python -m projectmirror --help
-
-# Audit the bundled intentionally incomplete demo
-python -m projectmirror init --repo examples/demo-app --out /tmp/pm-demo
-python -m projectmirror intent --spec examples/demo-app/requirements.md --state approved --out /tmp/pm-demo
-python -m projectmirror index --repo examples/demo-app --out /tmp/pm-demo
-python -m projectmirror diff --out /tmp/pm-demo
-python -m projectmirror plan --out /tmp/pm-demo
-python -m projectmirror render --out /tmp/pm-demo
+python -m projectmirror audit ./examples/demo-app \
+  --spec ./examples/demo-app/requirements.md \
+  --approved-spec --mode deep
 ```
 
-> The demo uses an intentionally approved **fixture** specification. `--state approved` on your own project is appropriate **only after you actually approve the spec**. With no reviewed links or test results, the safe result is `unknown`, not a fabricated bug report. To load reviewed *example-only* evidence and see a more interesting gap report, follow [`examples/README.md`](examples/README.md).
+The command prints an output directory **outside** the inspected project. Open `dashboard.html` in your browser or inspect the generated reports. `--approved-spec` is for an *actually approved* spec; the bundled fixture intentionally demonstrates one.
 
-**Generated outputs** (in `/tmp/pm-demo`, **outside** the audited project):
-
-```text
-pm-demo/
-├── audit-manifest.json       # scan scope, repo revision, limitations
-├── intent-map.json           # intended behavior / criteria
-├── implementation-map.json   # structural code inventory + hashes
-├── findings.json             # deterministic classifications
-├── audit-report.md           # human-readable audit report
-├── plan.json                 # proposed tasks; NOT authorization
-├── remediation-plan.md       # human review checklist
-└── mindmap.mmd               # Mermaid visualization
-```
-
-### Try an audit on your own project
-
-Start with a spec whose requirements have stable IDs:
-
-```markdown
-# Approved product requirements
-- [REQ.auth.login] Users can log in with valid credentials
-  - [AC.auth.login.valid] A valid login establishes an authenticated session
-- [REQ.auth.recovery] Users can request account recovery
-  - [AC.auth.recovery.email] A recovery email is sent to the account holder
-```
-
-Then run `init`, `intent`, and `index` against the project. **Review** code/source matches, record them as links, and import observed verification evidence *before* you interpret the comparison as a functional audit. [The full workflow shows the evidence formats](references/workflow.md).
-
-### Interpreting a result
-
-| Status | Meaning |
+| Generated file | What you'll see |
 |---|---|
-| `complete` | Current passing evidence covers each declared acceptance criterion for a linked implementation |
-| `missing` | Reviewed, sufficiently scoped evidence supports absence |
-| `partial` | The mapped implementation is explicitly documented as incomplete |
-| `broken` / `mismatch` | Current, evidenced test outcome fails or contradicts intent |
-| `unverified` | Implementation is linked but relevant behavior isn't proven |
-| `unknown` | Source, link, approval, or evidence isn't sufficient |
-| `undocumented` | An observed capability lacks an approved requirement mapping |
-| `spec_conflict` | Approved sources contradict one another and need resolution |
+| `dashboard.html` | Responsive, self-contained read-only audit report |
+| `audit-report.md` | Classified requirements and rationale |
+| `mindmap.mmd` | Mermaid mindmap of findings |
+| `candidate-links.json` | Explicitly **unreviewed** possible code matches |
+| `remediation-plan.md` | Human-review task proposals; not an execution authorization |
+| `audit-manifest.json` | Revision, scope, and known limitations |
 
-This prevents a file-name search from being mistaken for evidence that a feature works—or doesn't exist.
-
-## 🧠 How it works
-
-<details>
-<summary><b>1. Discover intent without inventing features</b></summary>
-
-ProjectMirror imports explicitly identified requirements. If no approved specification exists, the skill asks the user for intent or helps them prepare a **draft**. The codebase itself cannot define what's supposed to exist.
-
-</details>
-<details>
-<summary><b>2. Index implementation without executing untrusted code</b></summary>
-
-The stdlib CLI discovers source files, Python top-level declarations (AST), and JS/TS export candidates (heuristic). It skips common secrets, build outputs and symlinks, records source hashes, and exposes scan limitations. It **does not** promise complete language-specific analysis.
-
-</details>
-<details>
-<summary><b>3. Attach reviewed links and real verification</b></summary>
-
-An agent or reviewer maps stable requirement IDs to known implementation nodes. Tests, browser probes and logs may be imported only as **real observations** with revision and evidence. See [`references/data-model.md`](references/data-model.md).
-
-</details>
-<details>
-<summary><b>4. Compare, visualize and plan</b></summary>
-
-The core diff is deterministic given the validated input maps; it distinguishes confirmed absence from uncertainty. It produces classified findings, an accessible report and a generated Mermaid flowchart.
-
-</details>
-<details>
-<summary><b>5. Ask the user to approve — then re-verify</b></summary>
-
-The plan is review-only. A host coding agent must enforce specific user approval, file scope and environment, execute only authorized changes, and independently re-run relevant checks. The bundled CLI is not an execution engine.
-
-</details>
-
-## 🛠 Use it with your agent
-
-ProjectMirror uses the open [Agent Skills](https://agentskills.io/specification) format. The root [`SKILL.md`](SKILL.md) is the portable agent instruction; the Python package is an optional deterministic companion.
-
-| Environment | Recommended use |
-|---|---|
-| Agent Skills-compatible coding agent | Place/clone this folder in the agent's configured skills directory, then ask it to audit a project |
-| Other terminal-capable agents | Provide `SKILL.md` as instructions and give access to `python -m projectmirror` |
-| A custom agent or workflow | Invoke the CLI to produce JSON artifacts, review findings, and handle approvals in your own host |
-| Browser-capable agent | Perform separately authorized runtime probes and import their observed evidence |
-
-**Suggested prompt**
-
-> “Use ProjectMirror to compare my approved `docs/requirements.md` with the repository. Generate the three maps, report gaps with evidence, and prepare a prioritized plan. **Stop before changing any files.**”
-
-See [integration and operation guide](references/workflow.md), [data model](references/data-model.md), [approval policy](references/approval.md), and the [full design standard](docs/IMPLEMENTATION_STANDARD.md).
-
-## 🔐 Safety by design
-
-- **Read-only core:** no project code execution, edits, or deployment by the CLI.
-- **No absence by grep:** lack of a matching file/symbol means `unknown`, not `missing`.
-- **Independent sources:** code doesn't get to invent its own requirements.
-- **Trust boundaries:** code, issues, comments, and logs are input data, not instructions.
-- **Honest limits:** scanner coverage and unverified requirements are always visible.
-- **Revision binding:** tested behavior must match the recorded Git revision for a `complete` verdict.
-- **Approval binding:** external runner/agent must enforce authorization. `check-approval` checks consistency **only**, not identity or signature.
-
-Read [SECURITY.md](SECURITY.md) for security disclosures and limitations.
-
-## 🧪 Tests & development
+Try an inventory without a spec:
 
 ```bash
-python -m unittest discover -s tests -v
-python -m compileall -q projectmirror tests
-python -m projectmirror --help
+python -m projectmirror audit /path/to/project
 ```
 
-GitHub Actions runs the unit suite on supported Python versions. Tests cover false positives, reviewed absence, current vs stale evidence, malformed data, scope and approval metadata, scanner behavior, and the end-to-end demo. The versioned data formats are documented under [`schemas/`](schemas/) and [`references/`](references/).
+This is intentionally **structural inventory only**, not a false promise that the tool knows what your app should do.
 
-## 🗺 Roadmap
+### An actual demo result
 
-- [x] **v0.1 — Transparent foundation:** portable skill, structural indexer, evidence-aware diff, reports, Mermaid view, approval metadata checks and tests.
-- [ ] **v0.2 — Deeper adapters:** TypeScript AST, framework-specific route/UI detection, richer evidence provenance and schema validation.
-- [ ] **v0.3 — Behavioral verification:** isolated, opt-in test/browser runners with reproducible observations and traceability metrics.
-- [ ] **v0.4 — Change intelligence:** dependency impact analysis, risk-aware plans, drift timelines and evaluation fixtures.
-- [ ] **v1.0 — Ecosystem:** optional MCP bridge, adapters, review UI and cross-agent compatibility tests.
+The included intentionally incomplete fixture yields **three `unknown` requirements** when no reviewed implementation links are supplied. That's the correct, conservative answer. See [the worked example](examples/README.md) for importing reviewed links and absence evidence to get a meaningful gap report.
 
-**Planned ≠ shipped.** This is an early beta, not a complete autopilot or a guarantee that all defects can be detected.
+## One engine, five views
 
-## 📣 Help others discover it
+| Mode | Main purpose | Example |
+|---|---|---|
+| **Quick** | Lightweight source inventory | `--mode quick` |
+| **Deep** | Requirements, candidate links, validated evidence | `--mode deep --spec docs/requirements.md` |
+| **PR** | Git changed-file context plus audit | `--mode pr --base origin/main` |
+| **Drift** | Compare classifications to a prior baseline | `--mode drift --baseline /tmp/prior-audit` |
+| **Visual** | Import host-collected visual verification where available | `--mode visual --verification tests-evidence.json` |
 
-The release checklist in [`docs/PUBLISHING.md`](docs/PUBLISHING.md) includes suggested GitHub topics, a short project description, a responsible launch message, and contribution ideas. Adoption depends on real examples, honest limitations, and a welcoming community—not exaggerated claims.
+The modes share the same evidence rules. **PR mode does not automatically prove regression impact, and Visual mode does not launch a browser by itself.** [Understand every mode and limitation](docs/guides/audit-modes.md).
 
-## 🤝 Build it together
-
-Interesting contribution ideas: language-specific scanners, acceptance-criterion traceability, Mermaid/Markmap views, safe test adapters, evaluation benchmarks, and agent-platform adapters.
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) and [CHANGELOG.md](CHANGELOG.md). Found a security problem? Follow [SECURITY.md](SECURITY.md).
+## Meet your agent where it works
 
 <div align="center">
+<table>
+<tr><td width="50%"><b>🧠 Agent Skill</b><br>Use <a href="SKILL.md">SKILL.md</a> with Agent Skills-compatible clients; preview installation before copying files.</td><td width="50%"><b>⌨️ CLI</b><br><code>python -m projectmirror audit ...</code> for repeatable inspection and offline reports.</td></tr>
+<tr><td><b>🔌 Local MCP (experimental)</b><br>Three allowlisted, read-only tools exposed via stdio JSON-RPC. <a href="docs/integrations/mcp.md">Setup and limits</a>.</td><td><b>🐍 Python API</b><br><code>from projectmirror.experience import audit_project</code> for custom workflows. <a href="docs/integrations/python-api.md">Examples</a>.</td></tr>
+<tr><td><b>⚙️ GitHub Actions example</b><br>Generate artifact reports on pull requests; no auto-fixes. <a href="examples/github-actions/README.md">See workflow</a>.</td><td><b>🗺 Offline dashboard</b><br>Self-contained HTML report, generated with the audit. No hosted account needed.</td></tr>
+</table>
+</div>
+
+**Check your setup:**
+
+```bash
+python -m projectmirror doctor
+```
+
+**Install the skill into your agent's configured skills folder** (this is a preview first):
+
+```bash
+python -m projectmirror install-skill --dest ~/.codex/skills/mirrormap
+python -m projectmirror install-skill --dest ~/.codex/skills/mirrormap --apply
+```
+
+For Claude Code, replace the destination with its skills folder; never overwrite an existing install automatically. The installation script copies the portable skill and core to the requested destination and doesn't modify global agent configuration. For [skills.sh](https://skills.sh/) users, the external CLI may also support `npx skills add Guhanavish/mirrormap`; installation in specific agents should be verified rather than assumed.
+
+[**Install & setup guide**](docs/getting-started.md) · [**Agent integration patterns**](docs/integrations/agent-guides.md) · [**MCP contract**](docs/integrations/mcp.md)
+
+## The safety contract
+
+- **Intent is independent:** code cannot quietly rewrite requirements.
+- **Unverified means unverified:** a file exists ≠ a feature passes tests.
+- **Candidate matches never become reviewed evidence automatically.**
+- **No edits on audit:** report artifacts are outside the source repository.
+- **Human-approved remediation:** generated plans do not authorize themselves; the host controls code changes.
+- **Stale evidence doesn't count:** `complete` requires revision-matched verification for acceptance criteria.
+- **Honest errors:** missing specs, inaccessible tools and uncertainty are surfaced as limitations.
+
+Read [SECURITY.md](SECURITY.md) and [the evidence model](references/data-model.md).
+
+## Build with us
+
+The project welcomes reproducible reports, language-specific scanners, meaningful CI examples, and integration testing. If you propose a new agent adapter, verify the exact install path and tool capabilities first.
+
+[Report a bug](https://github.com/Guhanavish/mirrormap/issues/new) · [Contribute](CONTRIBUTING.md) · [Engineering standard](docs/IMPLEMENTATION_STANDARD.md) · [Changelog](CHANGELOG.md)
+
+## Roadmap
+
+- [x] **v0.1 Foundation:** independent maps, structural indexing, evidence-aware diff and reviewed plans.
+- [x] **v0.2 Evidence Atlas:** one-command audit, offline dashboard, five scoped modes, doctor, installer, candidate links, baseline comparison, Python API, experimental MCP and CI example.
+- [ ] **v0.3 Rich evidence:** framework-specific adapters, stronger AST and test/coverage imports, automatic safe link-review UX.
+- [ ] **v0.4 Connected workflows:** validated cross-agent installers, reproducible browser adapter, advanced PR impact and CI annotations.
+- [ ] **v1.0 Interactive review:** hosted docs/demo, approved-change interface, evaluations and verified plugin distribution.
+
+The live, interactive dashboard, fully automatic bug detection, agent-host approvals and hosted demo are **not** part of the v0.2 release. Read the [release notes](docs/release-notes-v0.2.md) for exact scope.
 
 ---
 
-### Good agents don't just build. They verify.
+<div align="center">
 
-**⭐ Star the project if evidence-backed AI development matters to you.**
+### **Know what your software promises. Prove what it delivers.**
 
-MIT licensed · Built for the open agent ecosystem
+Made for the open agent ecosystem · MIT licensed · [Creator's website](https://guhanavish.vercel.app/)
+
+**If MirrorMap saves you an audit, consider starring the repo.**
 
 </div>
