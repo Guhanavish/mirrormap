@@ -31,6 +31,21 @@ jobs:
           python -m projectmirror audit --help
       - name: Build package
         run: python -m pip wheel --no-deps . --wheel-dir dist
+      - name: Check wheel contents and excluded launch assets
+        run: |
+          python - <<'PYCODE'
+          from pathlib import Path
+          from zipfile import ZipFile
+          wheels = list(Path('dist').glob('*.whl'))
+          assert len(wheels) == 1, f'Expected one wheel, found {wheels}'
+          with ZipFile(wheels[0]) as wheel:
+              names = wheel.namelist()
+          assert 'projectmirror/skill_bundle/SKILL.md' in names
+          assert sum(n.startswith('projectmirror/skill_bundle/references/') for n in names) == 4
+          assert not any('docs/launch/' in n or n.endswith('launch-stats.csv')
+                         or n.endswith('mirrormap-30s-demo.mp4') for n in names)
+          print('Packaged skill and reference files verified; launch assets excluded')
+          PYCODE
       - name: Check skill and generated HTML
         run: |
           python -m projectmirror audit examples/demo-app --out "${RUNNER_TEMP}/mirrormap-ci"

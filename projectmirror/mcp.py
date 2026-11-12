@@ -1,7 +1,7 @@
-"""Experimental local stdio MCP interface (JSON-RPC, newline-framed).
+"""Experimental, local, newline-framed MCP JSON-RPC adapter.
 
-Only grants read-only source inspection within explicitly allowed local roots.
-It does NOT execute shell commands or edit the inspected project.
+The interface grants no code-edit permissions. It inspects only projects within
+explicit allowlisted roots, and rejects unsupported tools and malformed input.
 """
 from __future__ import annotations
 
@@ -16,6 +16,8 @@ from .experience import audit_project, doctor
 
 PROTOCOL = "2025-06-18"
 VERSION = "0.4.0"
+MAX_MESSAGE_CHARS = 1_000_000
+MAX_REPORT_CHARS = 30_000
 
 TOOLS = [
     {"name": "mirrormap_doctor", "description": "Report local tool presence; no repository access.",
@@ -29,12 +31,36 @@ TOOLS = [
          "base": {"type": "string", "description": "Git base ref for PR inventory"},
          "junit": {"type": "string", "description": "Optional existing JUnit XML report under MIRRORMAP_ALLOWED_ROOTS; only unreviewed candidates"}},
          "additionalProperties": False}},
-    {"name": "mirrormap_read_report", "description": "Read one generated MirrorMap report for an allowlisted project, capped to 30 KB.",
+    {"name": "mirrormap_read_report", "description": "Read one generated MirrorMap report for an allowlisted project, capped to 30,000 characters.",
      "inputSchema": {"type": "object", "required": ["out"], "properties": {
          "out": {"type": "string"},
          "name": {"type": "string", "enum": ["audit-report.md", "remediation-plan.md", "mindmap.mmd"]}},
          "additionalProperties": False}},
 ]
+
+_TOOL_SCHEMAS = {tool["name"]: tool["inputSchema"] for tool in TOOLS}
+
+
+def _validate_tool_arguments(name: str, args: Any) -> dict:
+    """Validate exactly the advertised, intentionally limited MCP tool inputs."""
+    schema = _TOOL_SCHEMAS.get(name)
+    if schema is None:
+        raise AuditError(f"Unknown tool: {name}")
+    if not isinstance(args, dict):
+        raise AuditError("Tool arguments must be an object")
+    unknown = set(args) - set(schema["properties"])
+    if unknown:
+        raise AuditError("Unsupported tool argument(s): " + ", ".join(sorted(map(str, unknown))))
+    for required in schema.get("required", []):
+        if required not in args:
+            raise AuditError(f"Missing required tool argument: {required}")
+    for key, value in args.items():
+        definition = schema["properties"][key]
+        if definition.get("type") == "string" and (not isinstance(value, str) or not value.strip()):
+            raise AuditError(f"Tool argument {key} must be a nonempty string")
+        if "enum" in definition and value not in definition["enum"]:
+            raise AuditError(f"Invalid value for tool argument: {key}")
+    return args
 
 
 def _allowlisted(path: Path) -> Path:
@@ -49,36 +75,30 @@ def _allowlisted(path: Path) -> Path:
 
 
 def invoke(name: str, args: dict) -> dict:
-    if not isinstance(args, dict):
-        raise AuditError("Tool arguments must be an object")
+    args = _validate_tool_arguments(name, args)
     if name == "mirrormap_doctor":
         return doctor()
     if name == "mirrormap_audit":
-        if not isinstance(args.get("repo"), str):
-            raise AuditError("repo path required")
         project = _allowlisted(Path(args["repo"]))
-        spec = args.get("spec")
-        if spec is not None:
-            source = Path(spec).expanduser().resolve()
-            _allowlisted(source)
-        else:
-            source = None
-        junit = args.get("junit")
-        if junit is not None and not isinstance(junit, str):
-            raise AuditError("junit must be a path string")
-        junit_path = _allowlisted(Path(junit)) if junit else None
-        return audit_project(project, spec=source, out=args.get("out"), mode=args.get("mode", "quick"),
-                             base=args.get("base"), junit_sources=[junit_path] if junit_path else None)
+        spec = _allowlisted(Path(args["spec"])) if "spec" in args else None
+        junit = _allowlisted(Path(args["junit"])) if "junit" in args else None
+        return audit_project(project, spec=spec, out=args.get("out"), mode=args.get("mode", "quick"),
+                             base=args.get("base"), junit_sources=[junit] if junit else None)
     if name == "mirrormap_read_report":
-        out = Path(args.get("out", "")).expanduser().resolve()
+        out = Path(args["out"]).expanduser().resolve()
         m = load(out / "audit-manifest.json")
-        project = _allowlisted(Path(m["project"]["repo"]))
+        project_data = m.get("project")
+        if not isinstance(project_data, dict) or not isinstance(project_data.get("repo"), str):
+            raise AuditError("Report manifest has no valid project repository")
+        project = _allowlisted(Path(project_data["repo"]))
         ensure_output(project, out)
         fname = args.get("name", "audit-report.md")
-        if fname not in {"audit-report.md", "remediation-plan.md", "mindmap.mmd"}:
-            raise AuditError("Only generated report filenames are supported")
         p = out / fname
-        return {"report": p.read_text(encoding="utf-8")[:30000], "truncated": p.stat().st_size > 30000}
+        if p.is_symlink():
+            raise AuditError("Refusing to follow a symlinked report")
+        with p.open("r", encoding="utf-8") as file:
+            content = file.read(MAX_REPORT_CHARS + 1)
+        return {"report": content[:MAX_REPORT_CHARS], "truncated": len(content) > MAX_REPORT_CHARS}
     raise AuditError("Unknown tool")
 
 
@@ -87,14 +107,21 @@ def respond(obj: dict) -> None:
     sys.stdout.flush()
 
 
+def _error(mid: Any, code: int, message: str) -> dict:
+    return {"jsonrpc": "2.0", "id": mid, "error": {"code": code, "message": message}}
+
+
 def dispatch(req: Any) -> dict | None:
-    if not isinstance(req, dict):
-        return {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Invalid request"}}
-    mid, method = req.get("id"), req.get("method")
-    if not isinstance(method, str):
-        return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32600, "message": "Invalid method"}}
-    if mid is None:
-        return None  # JSON-RPC notification
+    if not isinstance(req, dict) or req.get("jsonrpc") != "2.0":
+        return _error(None, -32600, "Invalid JSON-RPC request")
+    mid = req.get("id")
+    if "id" in req and (isinstance(mid, bool) or not (mid is None or isinstance(mid, (str, int)))):
+        return _error(None, -32600, "Invalid JSON-RPC id")
+    method = req.get("method")
+    if not isinstance(method, str) or not method:
+        return _error(mid, -32600, "Invalid method")
+    if "id" not in req:
+        return None  # Notification: no response, including unknown methods.
     try:
         if method == "initialize":
             value = {"protocolVersion": PROTOCOL, "capabilities": {"tools": {}},
@@ -105,31 +132,42 @@ def dispatch(req: Any) -> dict | None:
         elif method == "tools/list":
             value = {"tools": TOOLS}
         elif method == "tools/call":
-            params = req.get("params") or {}
+            params = req.get("params")
             if not isinstance(params, dict):
-                raise AuditError("Tool params must be an object")
-            result = invoke(params.get("name", ""), params.get("arguments") or {})
-            value = {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+                return _error(mid, -32602, "Tool params must be an object")
+            name = params.get("name")
+            if not isinstance(name, str):
+                return _error(mid, -32602, "Tool name must be a string")
+            args = params.get("arguments", {})
+            try:
+                _validate_tool_arguments(name, args)
+            except AuditError as ex:
+                return _error(mid, -32602, str(ex))
+            try:
+                result = invoke(name, args)
+                value = {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+            except (AuditError, OSError, UnicodeError, ValueError, KeyError, TypeError) as ex:
+                value = {"content": [{"type": "text", "text": str(ex)}], "isError": True}
         else:
-            return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "Method not found"}}
+            return _error(mid, -32601, "Method not found")
         return {"jsonrpc": "2.0", "id": mid, "result": value}
-    except (AuditError, OSError, ValueError, KeyError, TypeError) as e:
-        if method == "tools/call":
-            return {"jsonrpc": "2.0", "id": mid, "result": {"content": [{"type": "text", "text": str(e)}], "isError": True}}
-        return {"jsonrpc": "2.0", "id": mid, "error": {"code": -32602, "message": str(e)}}
+    except (AuditError, OSError, UnicodeError, ValueError, KeyError, TypeError) as ex:
+        return _error(mid, -32602, str(ex))
 
 
 def serve() -> int:
     for raw in sys.stdin:
-        if len(raw) > 1_000_000:
+        if len(raw) > MAX_MESSAGE_CHARS:
+            respond(_error(None, -32600, "MCP request too large"))
             continue
         try:
             req = json.loads(raw)
-            result = dispatch(req)
-            if result is not None:
-                respond(result)
         except (json.JSONDecodeError, UnicodeError):
-            respond({"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}})
+            respond(_error(None, -32700, "Parse error"))
+            continue
+        result = dispatch(req)
+        if result is not None:
+            respond(result)
     return 0
 
 

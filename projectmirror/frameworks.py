@@ -89,13 +89,37 @@ def _fastapi_routes(rel: Path, source: str, evidence_id: str) -> list[dict]:
         tree = ast.parse(source)
     except SyntaxError:
         return []
-    # Skip generic `@whatever.get(...)` without a concrete FastAPI import.
-    has_fastapi_import = any(
-        (isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "fastapi")
-        or (isinstance(node, ast.Import) and any(alias.name.split(".")[0] == "fastapi" for alias in node.names))
-        for node in ast.walk(tree)
-    )
-    if not has_fastapi_import:
+    # Only recognize decorators on instances assigned from FastAPI / APIRouter
+    # constructors imported in this file. A generic @cache.get must not be
+    # mistaken for a route merely because FastAPI is imported elsewhere.
+    constructors = {}
+    module_aliases = set()
+    for statement in tree.body:
+        if isinstance(statement, ast.ImportFrom) and statement.module in {"fastapi", "fastapi.applications", "fastapi.routing"}:
+            constructors.update({alias.asname or alias.name: alias.name for alias in statement.names
+                                 if alias.name in {"FastAPI", "APIRouter"}})
+        elif isinstance(statement, ast.Import):
+            module_aliases.update(alias.asname or alias.name for alias in statement.names
+                                  if alias.name == "fastapi")
+    receiver_names = set()
+    for statement in tree.body:
+        value = None
+        names = []
+        if isinstance(statement, ast.Assign):
+            value = statement.value
+            names = [target.id for target in statement.targets if isinstance(target, ast.Name)]
+        elif isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
+            value = statement.value
+            names = [statement.target.id]
+        if not isinstance(value, ast.Call):
+            continue
+        func = value.func
+        direct = isinstance(func, ast.Name) and constructors.get(func.id) in {"FastAPI", "APIRouter"}
+        qualified = (isinstance(func, ast.Attribute) and func.attr in {"FastAPI", "APIRouter"}
+                     and isinstance(func.value, ast.Name) and func.value.id in module_aliases)
+        if direct or qualified:
+            receiver_names.update(names)
+    if not receiver_names:
         return []
     found = []
     for node in ast.walk(tree):
@@ -103,6 +127,7 @@ def _fastapi_routes(rel: Path, source: str, evidence_id: str) -> list[dict]:
             continue
         for dec in node.decorator_list:
             if (not isinstance(dec, ast.Call) or not isinstance(dec.func, ast.Attribute)
+                    or not isinstance(dec.func.value, ast.Name) or dec.func.value.id not in receiver_names
                     or dec.func.attr not in _FASTAPI_METHODS or not dec.args):
                 continue
             # Static strings only. Dynamic paths are not reconstructed.

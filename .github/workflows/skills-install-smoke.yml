@@ -9,6 +9,12 @@ on:
       - docs/integrations/skills-cli-verification.md
       - .github/workflows/skills-install-smoke.yml
       - tests/test_issue_walkthrough.py
+      - tests/test_mcp.py
+      - tests/test_docs.py
+      - projectmirror/**
+      - references/**
+      - pyproject.toml
+      - MANIFEST.in
   workflow_dispatch:
 
 permissions:
