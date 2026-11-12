@@ -1,5 +1,7 @@
 # 30-second MirrorMap walkthrough (real fixture, no invented findings)
 
+For a copy-and-paste explanation of both phases, see the [two-minute first-audit guide](../guides/first-audit-walkthrough.md).
+
 This repository includes `assets/mirrormap-30s-demo.mp4` and its animated teaser `assets/mirrormap-demo-preview.webp`. The video is an **edited six-scene storyboard** using real CLI outputs and an authentic previous Chromium dashboard capture. It is **not** an uncut live screen recording.
 
 | Time | Scene | Claim backed by repository behavior |

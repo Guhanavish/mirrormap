@@ -35,6 +35,8 @@ This narrated-by-captions, edited walkthrough uses the **bundled fixture** and a
 
 ## Install as an agent skill
 
+**Verified installation:** [Clean Codex Skills CLI walkthrough](docs/integrations/skills-cli-verification.md) (the separate Python audit CLI must still be available).
+
 For agents supported by the independent [Skills CLI](https://www.skills.sh/docs), the standard GitHub install syntax is:
 
 ```bash
@@ -82,6 +84,8 @@ Every conclusion needs a trail back to source, approved requirements, or verifie
 > **Source scanning is not functional testing.** MirrorMap's core does **not** execute the project's application code, automatically change files, or approve its own remediation. Browser tests and execution require separate host capabilities and permission. v0.4 is a beta, not an exhaustive bug detector.
 
 ## Get a result in one command
+
+**First audit?** Follow the [two-minute evidence walkthrough](docs/guides/first-audit-walkthrough.md) to see 3 unknown findings change to 1 missing and 2 unverified *only after* reviewed fixture evidence is supplied.
 
 **Requires Python 3.10+**. The runtime uses the standard library. Run directly from the repository:
 

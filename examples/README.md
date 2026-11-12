@@ -1,5 +1,7 @@
 # Demonstration project
 
+**New to MirrorMap?** Start with the [reproducible two-phase walkthrough](../docs/guides/first-audit-walkthrough.md): first 3 `unknown`, then 1 `missing` and 2 `unverified` with reviewed **fixture** evidence.
+
 `demo-app/` is intentionally incomplete. Its Python code must **not** be used for authentication; it exists to demonstrate that file discovery alone cannot establish correctness.
 
 Use the command sequence in `references/workflow.md`. Without reviewed links, real test evidence, or absence confirmations, the audit will responsibly show **unknown** rather than pretending it found missing/working features.

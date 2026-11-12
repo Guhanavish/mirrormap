@@ -4,6 +4,9 @@ These materials are a **distribution kit**, not claims of popularity, endorsemen
 
 ## Choose the right starting point
 
+- [Two-minute, independently tested demo](../guides/first-audit-walkthrough.md)
+- [Verified Codex Skills CLI install and its limits](../integrations/skills-cli-verification.md)
+
 | Goal | Resource |
 |---|---|
 | See the actual demo and its evidence limitations | [30-second demo script](demo-script.md) |

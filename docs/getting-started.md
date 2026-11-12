@@ -17,6 +17,8 @@ MirrorMap is an **evidence-backed project auditor**, not an automatic code fixer
 
 ## Run your first project audit
 
+For a fully explained example with exact expected outcomes, use the [two-minute walkthrough](guides/first-audit-walkthrough.md). For a documented clean Codex skill install, see the [Skills CLI verification guide](integrations/skills-cli-verification.md).
+
 ```bash
 git clone https://github.com/Guhanavish/mirrormap.git
 cd mirrormap
