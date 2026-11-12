@@ -1,10 +1,14 @@
-name: Verify Skills CLI installation
+name: Verify Skills CLI installation and first audit
 
 on:
   pull_request:
     paths:
       - SKILL.md
+      - docs/getting-started.md
+      - docs/guides/first-audit-walkthrough.md
+      - docs/integrations/skills-cli-verification.md
       - .github/workflows/skills-install-smoke.yml
+      - tests/test_issue_walkthrough.py
   workflow_dispatch:
 
 permissions:
@@ -12,14 +16,27 @@ permissions:
 
 jobs:
   install:
-    name: Fresh Codex skill install
+    name: Fresh Codex skill install and read-only fixture audit
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
+      - name: Checkout exact PR revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up supported Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.20.0'
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Record runtime versions
+        run: |
+          node --version
+          npm --version
+          python --version
       - name: Install published MirrorMap skill in a clean directory
         shell: bash
         run: |
@@ -30,6 +47,33 @@ jobs:
             --skill mirrormap -a codex --copy -y
           skill_file=".agents/skills/mirrormap/SKILL.md"
           test -s "$skill_file"
-          grep -Eq 'ProjectMirror|MirrorMap' "$skill_file"
-          head -n 8 "$skill_file"
-          echo "Installed skill: $skill_file"
+          grep -q '^name: mirrormap' "$skill_file"
+          echo "Installed file: $skill_file"
+      - name: Reproduce both example findings from source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          python -m projectmirror audit examples/demo-app \
+            --spec examples/demo-app/requirements.md \
+            --approved-spec --mode deep \
+            --out "$RUNNER_TEMP/mirrormap-initial"
+          python -m projectmirror audit examples/demo-app \
+            --spec examples/demo-app/requirements.md \
+            --approved-spec --mode deep \
+            --links examples/fixture-reviewed-links.json \
+            --absence examples/fixture-reviewed-absence.json \
+            --out "$RUNNER_TEMP/mirrormap-reviewed"
+          python - "$RUNNER_TEMP" <<'PY'
+          import json
+          import pathlib
+          import sys
+          folder = pathlib.Path(sys.argv[1])
+          actual = [json.loads((folder / name / 'findings.json').read_text())['counts']
+                    for name in ('mirrormap-initial', 'mirrormap-reviewed')]
+          assert actual == [{'unknown': 3}, {'missing': 1, 'unverified': 2}], actual
+          for name in ('mirrormap-initial', 'mirrormap-reviewed'):
+              assert (folder / name / 'dashboard.html').is_file()
+          print('Expected fixture classifications confirmed:', actual)
+          PY
+          python -m unittest tests.test_issue_walkthrough -v
