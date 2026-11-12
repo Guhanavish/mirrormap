@@ -1,0 +1,7 @@
+# Explicitly keep internal promotional and large media files out of source builds.
+include README.md LICENSE
+recursive-include projectmirror/skill_bundle *.md
+prune docs/launch
+exclude examples/launch-stats.csv
+exclude assets/mirrormap-30s-demo.mp4
+global-exclude __pycache__ *.py[cod] .DS_Store

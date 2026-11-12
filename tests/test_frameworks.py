@@ -91,3 +91,39 @@ async def update(user_id: str): return {"id": user_id}
 
 if __name__ == "__main__":
     unittest.main()
+
+# Additional safeguards for third-party decorators in modules importing FastAPI.
+class ConservativeFastAPIReceiverTests(unittest.TestCase):
+    def test_unrelated_cache_decorator_is_not_a_route_when_fastapi_imported(self):
+        src = '''from fastapi import FastAPI
+from mylib import Cache
+app = FastAPI()
+cache = Cache()
+@cache.get("/cache")
+def not_an_endpoint(): pass
+@app.get("/real")
+def endpoint(): pass
+'''
+        nodes = framework_route_candidates(Path("main.py"), src, "ev.code")
+        self.assertEqual([node["route_path"] for node in nodes], ["/real"])
+
+    def test_fastapi_import_aliases_and_annotated_router(self):
+        src = '''import fastapi as f
+from fastapi.routing import APIRouter as Router
+app: f.FastAPI = f.FastAPI()
+api: Router = Router()
+@app.get("/health")
+def health(): pass
+@api.post("/data")
+def data(): pass
+'''
+        nodes = framework_route_candidates(Path("server.py"), src, "ev.code")
+        self.assertEqual([(n["http_method"], n["route_path"]) for n in nodes],
+                         [("get", "/health"), ("post", "/data")])
+
+    def test_imported_fastapi_without_instantiation_does_not_guess_routes(self):
+        src = '''from fastapi import FastAPI
+@fake.get("/not-real")
+def fake_handler(): pass
+'''
+        self.assertEqual(framework_route_candidates(Path("main.py"), src, "ev.code"), [])

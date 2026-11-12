@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,7 @@ version = "0.4.0"
 description = "Evidence-backed agent skill for spec drift auditing and human-gated remediation planning"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [{name = "MirrorMap contributors"}]
 keywords = ["agent-skill", "ai-agents", "spec-drift", "audit", "mindmap", "developer-tools"]
 classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent", "Topic :: Software Development :: Quality Assurance"]
@@ -16,6 +16,10 @@ classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS In
 [project.scripts]
 projectmirror = "projectmirror.__main__:cmd_main"
 mirrormap = "projectmirror.experience:main"
+
+[tool.setuptools]
+# Only Python modules plus the explicit packaged skill bundle ship in the wheel.
+include-package-data = false
 
 [tool.setuptools.packages.find]
 where = ["."]

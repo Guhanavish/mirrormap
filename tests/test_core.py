@@ -67,7 +67,7 @@ class CoreTest(unittest.TestCase):
         self.assertEqual(classify(verification_nodes=[verification(evidence=[])]), "unverified")
 
     def test_uncovered_second_criterion_is_unverified(self):
-        r = req(criteria=[{"id": "AC.auth.login.valid"}, {"id": "AC.auth.login.revocation"}])
+        r = req(criteria=[{"id": "AC.auth.login.valid", "statement": "Valid login works"}, {"id": "AC.auth.login.revocation", "statement": "Session revocation works"}])
         self.assertEqual(classify(intent=r, verification_nodes=[verification()]), "unverified")
 
     def test_failing_check_is_broken(self):

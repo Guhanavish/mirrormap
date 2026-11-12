@@ -96,24 +96,38 @@ def validate_nodes(obj: dict, name: str, expected_map: str) -> list[dict]:
             raise AuditError(f"{name}: {node['id']} must have map={expected_map}")
         if not isinstance(node.get("title"), str) or not node["title"].strip():
             raise AuditError(f"{name}: {node['id']} needs a title")
+        refs = node.get("source_refs", [])
+        if not isinstance(refs, list) or any(not isinstance(ref, str) for ref in refs):
+            raise AuditError(f"{name}: {node['id']} source_refs must contain strings")
         if expected_map == "intent":
-            if node.get("requirement_state", "draft") not in VALID_INTENT_STATES:
+            if node.get("requirement_state") not in VALID_INTENT_STATES:
                 raise AuditError(f"{name}: {node['id']} has an invalid requirement state")
             criteria = node.get("acceptance_criteria", [])
-            if not isinstance(criteria, list) or any(not isinstance(c, dict) or not isinstance(c.get("id"), str) for c in criteria):
+            if not isinstance(criteria, list) or any(
+                not isinstance(c, dict) or not isinstance(c.get("id"), str)
+                or not ID_RE.fullmatch(c["id"])
+                or not isinstance(c.get("statement"), str) or not c["statement"].strip()
+                for c in criteria
+            ):
                 raise AuditError(f"{name}: {node['id']} has invalid acceptance criteria")
             ids = [c["id"] for c in criteria]
             if len(ids) != len(set(ids)):
                 raise AuditError(f"{name}: {node['id']} has duplicate acceptance criterion IDs")
         elif expected_map == "implementation":
+            if "locator" in node and not isinstance(node["locator"], str):
+                raise AuditError(f"{name}: {node['id']} locator must be a string")
             if node.get("implementation_state", "present") not in VALID_IMPL_STATES:
                 raise AuditError(f"{name}: {node['id']} has an invalid implementation state")
         elif expected_map == "verification":
+            if not isinstance(node.get("requirement_id"), str) or not ID_RE.fullmatch(node["requirement_id"]):
+                raise AuditError(f"{name}: {node['id']} needs a valid requirement_id")
+            if "revision" in node and node["revision"] is not None and not isinstance(node["revision"], str):
+                raise AuditError(f"{name}: {node['id']} revision must be a string or null")
             if node.get("result") not in VALID_RESULTS:
                 raise AuditError(f"{name}: {node['id']} has invalid verification result")
-            if not isinstance(node.get("evidence", []), list) or any(not isinstance(e, str) for e in node.get("evidence", [])):
+            if "evidence" not in node or not isinstance(node["evidence"], list) or any(not isinstance(e, str) for e in node["evidence"]):
                 raise AuditError(f"{name}: {node['id']} evidence must be a list of strings")
-            if not isinstance(node.get("criteria_ids", []), list) or any(not isinstance(c, str) for c in node.get("criteria_ids", [])):
+            if not isinstance(node.get("criteria_ids", []), list) or any(not isinstance(c, str) or not ID_RE.fullmatch(c) for c in node.get("criteria_ids", [])):
                 raise AuditError(f"{name}: {node['id']} criteria_ids must be a list of strings")
     return nodes
 
@@ -130,7 +144,10 @@ def parse_spec(path: Path, state: str = "draft") -> dict:
         obj = load(path)
         validate_nodes(obj, "intent-map", "intent")
         return obj
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as ex:
+        raise AuditError(f"Cannot read requirements at {path}: {ex}") from ex
     nodes, latest, seen = [], None, set()
     req = re.compile(r"^\s*[-*]\s+\[(REQ[.\w-]+)\]\s+(.+?)\s*$", re.I)
     ac = re.compile(r"^\s+[-*]\s+\[(AC[.\w-]+)\]\s+(.+?)\s*$", re.I)
@@ -251,11 +268,17 @@ def compare(intent: dict, implementation: dict, verification: dict, links: dict,
         if test.get("result") not in VALID_RESULTS:
             raise AuditError(f"Invalid verification result for {test['id']}")
         observed[test["requirement_id"]].append(test)
+    confirmations = absence.get("confirmations", [])
+    if not isinstance(confirmations, list):
+        raise AuditError("absence.confirmations must be an array")
     absent = {}
-    for a in absence.get("confirmations", []):
+    for a in confirmations:
         if not isinstance(a, dict) or a.get("requirement_id") not in by_req:
             raise AuditError("Invalid absence confirmation")
-        if a.get("reviewed") is True and a.get("coverage") == "exhaustive" and a.get("evidence"):
+        evidence = a.get("evidence", [])
+        if not isinstance(evidence, list) or any(not isinstance(item, str) or not item.strip() for item in evidence):
+            raise AuditError("Absence evidence must be a list of nonempty source references")
+        if a.get("reviewed") is True and a.get("coverage") == "exhaustive" and evidence:
             absent[a["requirement_id"]] = a
     rev = manifest_obj.get("project", {}).get("revision")
     findings = []

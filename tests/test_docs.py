@@ -33,6 +33,17 @@ class DocsTests(unittest.TestCase):
         self.assertEqual(main, bundle)
         self.assertIn("name: mirrormap", main)
         self.assertIn("version: \"0.4.0\"", main)
+        root_refs = ROOT / "references"
+        bundled_refs = ROOT / "projectmirror" / "skill_bundle" / "references"
+        root_names = {p.name for p in root_refs.glob("*.md")}
+        bundle_names = {p.name for p in bundled_refs.glob("*.md")}
+        self.assertEqual(root_names, bundle_names, "Skill references must have identical file sets")
+        self.assertTrue(root_names, "Missing bundled skill references")
+        for name in sorted(root_names):
+            with self.subTest(reference=name):
+                self.assertEqual((root_refs / name).read_bytes(),
+                                 (bundled_refs / name).read_bytes(),
+                                 f"Reference {name} drifted from its packaged copy")
 
     def test_generated_html_escapes_untrusted_source_text(self):
         with tempfile.TemporaryDirectory() as tmp:

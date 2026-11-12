@@ -41,10 +41,13 @@ def _report_paths(sources: list[str | Path]) -> list[Path]:
 
 
 def _test_cases(path: Path) -> tuple[list[dict], str]:
-    size = path.stat().st_size
-    if size > MAX_BYTES:
-        raise AuditError(f"JUnit report too large (>{MAX_BYTES} bytes): {path}")
-    raw = path.read_bytes()
+    try:
+        size = path.stat().st_size
+        if size > MAX_BYTES:
+            raise AuditError(f"JUnit report too large (>{MAX_BYTES} bytes): {path}")
+        raw = path.read_bytes()
+    except OSError as ex:
+        raise AuditError(f"Cannot read JUnit XML report at {path}: {ex}") from ex
     if re.search(br'<!\s*(?:DOCTYPE|ENTITY)\b', raw, flags=re.I):
         raise AuditError(f"DTD/entity declarations are not permitted in JUnit input: {path}")
     sha = hashlib.sha256(raw).hexdigest()
