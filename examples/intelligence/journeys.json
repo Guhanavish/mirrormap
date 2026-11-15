@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "journeys": [
+    {
+      "id": "FLOW.demo.login",
+      "title": "Login journey (illustrative, without a browser run)",
+      "steps": [
+        {
+          "id": "STEP.demo.enter",
+          "description": "User submits credentials",
+          "requirement_id": "REQ.auth.login",
+          "verification_ids": []
+        },
+        {
+          "id": "STEP.demo.session",
+          "description": "Session is created if credentials are valid",
+          "requirement_id": "REQ.auth.login",
+          "verification_ids": []
+        }
+      ]
+    }
+  ]
+}

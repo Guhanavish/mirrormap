@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Guhanavish/mirrormap/blob/main/schemas/investigations.schema.json",
+  "title": "Investigation queue",
+  "description": "Local, informational MirrorMap artifact. Does not grant execution authority.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "investigations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "investigations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "requirement_id",
+          "priority",
+          "automatic_execution",
+          "authority"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,160}$"
+          },
+          "requirement_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,160}$"
+          },
+          "priority": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "automatic_execution": {
+            "const": false
+          },
+          "authority": {
+            "const": "suggestion_only"
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

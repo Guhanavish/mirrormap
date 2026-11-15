@@ -4,7 +4,7 @@ description: Audit software projects against approved requirements using indepen
 license: MIT
 compatibility: Requires Python 3.10+ for the bundled optional audit CLI and read access to the project. Runtime and browser checks require additional tools provided by the host agent.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0b1"
 ---
 
 # MirrorMap — Evidence Atlas for project intelligence
@@ -60,6 +60,14 @@ python -m projectmirror audit /path/to/repo --spec /path/to/approved-requirement
 ```
 
 JUnit XML is imported **without executing tests**. Without a reviewed mapping file, it stays in `junit-candidates.json` and cannot produce verification claims. Mapping IDs and stated revision are checked; the tool cannot attest when the test ran or whether its assertions prove the criterion. See `docs/guides/junit-evidence.md` in a source checkout. Never treat generated candidate links as reviewed requirement mappings. See `docs/getting-started.md` and `docs/guides/audit-modes.md` when using the source checkout.
+
+### Evidence Intelligence (v0.5 development preview)
+
+Audits now also write **evidence passports, an investigation queue, assumption debt, explicit specification conflicts, freshness metadata, readiness status, and a review-only approval draft**. These are summaries of available data, **not newly observed behavior or permission to run tests**. A `--changed-path src/file.py` audit can produce a limited possible-impact preview from manually reviewed links. A `--journeys path/to/journeys.json` argument imports user-supplied journey steps linked only to existing observations; no browser runs.
+
+The audit's `audit-handoff.json` contains SHA-256 hashes of its output artifacts; `python -m projectmirror verify-handoff --out /path/to/audit` verifies byte integrity only, not the origin or authority of a result. Use a fresh output directory for each audit; reusing an old report folder is rejected to prevent mixed-revision evidence.
+
+See `docs/guides/evidence-intelligence.md` and `docs/ROADMAP_NEXT.md` in the source repository. Features such as auto-running Playwright, signed approvals, cross-repository contracts, and mutation testing are **future work**.
 
 ### MCP / agent integration
 

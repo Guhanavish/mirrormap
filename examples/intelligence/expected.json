@@ -1,0 +1,5 @@
+{
+  "REQ.auth.login": "unverified",
+  "REQ.auth.logout": "unverified",
+  "REQ.auth.recovery": "missing"
+}

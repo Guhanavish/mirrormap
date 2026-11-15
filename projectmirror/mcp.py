@@ -15,7 +15,7 @@ from .core import AuditError, ensure_output, load
 from .experience import audit_project, doctor
 
 PROTOCOL = "2025-06-18"
-VERSION = "0.4.0"
+VERSION = "0.5.0b1"
 MAX_MESSAGE_CHARS = 1_000_000
 MAX_REPORT_CHARS = 30_000
 

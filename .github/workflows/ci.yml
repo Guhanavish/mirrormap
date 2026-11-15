@@ -51,3 +51,5 @@ jobs:
           python -m projectmirror audit examples/demo-app --out "${RUNNER_TEMP}/mirrormap-ci"
           test -s "${RUNNER_TEMP}/mirrormap-ci/dashboard.html"
           test -s "${RUNNER_TEMP}/mirrormap-ci/audit-report.md"
+          test -s "${RUNNER_TEMP}/mirrormap-ci/evidence-passports.json"
+          python -m projectmirror verify-handoff --out "${RUNNER_TEMP}/mirrormap-ci"

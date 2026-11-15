@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Guhanavish/mirrormap/blob/main/schemas/approval-draft.schema.json",
+  "title": "Unsigned, non-authorizing approval template",
+  "description": "Local, informational MirrorMap artifact. Does not grant execution authority.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "approved",
+    "execution_authorized",
+    "host_enforcement_required",
+    "candidate_tasks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "approved": {
+      "const": false
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "host_enforcement_required": {
+      "const": true
+    },
+    "candidate_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "task_id",
+          "type",
+          "allowed_paths"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,160}$"
+          },
+          "type": {
+            "enum": [
+              "investigate",
+              "remediate"
+            ]
+          },
+          "allowed_paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

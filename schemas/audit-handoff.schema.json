@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Guhanavish/mirrormap/blob/main/schemas/audit-handoff.schema.json",
+  "title": "Read-only audit artifact handoff",
+  "description": "Local, informational MirrorMap artifact. Does not grant execution authority.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "authority",
+    "execution_approved",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "authority": {
+      "const": "read_only_handoff"
+    },
+    "execution_approved": {
+      "const": false
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "sha256",
+          "size_bytes"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._-]+$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}
