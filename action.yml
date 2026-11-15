@@ -105,5 +105,10 @@ runs:
           esac
           args+=(--test-map "$mapping_path")
         fi
-        python3 -m projectmirror "${args[@]}" > "$report/summary.json"
+        # Keep the audit directory empty at start so old evidence cannot mix in.
+        # Buffer the shell summary outside the report until the audit finishes.
+        summary_tmp="$(mktemp "${RUNNER_TEMP}/mirrormap-summary.XXXXXXXX")"
+        trap 'rm -f "$summary_tmp"' EXIT
+        python3 -m projectmirror "${args[@]}" > "$summary_tmp"
+        mv "$summary_tmp" "$report/summary.json"
         echo "MirrorMap report stored at: $report"

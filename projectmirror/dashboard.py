@@ -31,7 +31,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,inpu
 .pill.complete{border-color:#387d63;color:#a3ead1}.pill.missing,.pill.broken,.pill.mismatch{border-color:#995860;color:#ffabb7}.pill.partial,.pill.spec_conflict{border-color:#92714b;color:#f4d2a4}.pill.unverified,.pill.unknown{border-color:#5f7786;color:#bed1de}.pill.undocumented{border-color:#796e9a;color:#d1c7f6}
 .canvasControls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.toggle{color:var(--mint);border:1px solid #3a6459;border-radius:9px;background:#1b3431;padding:7px 11px;font-size:12px}.toggle[aria-pressed=false]{color:var(--muted);background:transparent;border-color:var(--line)}
 .canvas{overflow:auto;max-height:650px;background-image:radial-gradient(#40605b50 .75px,transparent .75px);background-size:18px 18px;min-height:300px}.canvas svg{display:block;min-width:900px;max-width:none}.canvas svg g[role=button]{cursor:pointer}.canvas svg g[role=button]:focus-visible rect{stroke:#fff;stroke-width:3}.empty{padding:45px 20px;text-align:center;color:var(--muted)}.details{padding:18px;border-top:1px solid var(--line)}.details h2{margin:0 0 5px}.details p{margin:7px 0;font-size:13px}.detailGrid{display:grid;grid-template-columns:110px 1fr;gap:7px 12px;font-size:12px;overflow-wrap:anywhere}.detailGrid dt{color:var(--muted)}.detailGrid dd{margin:0}.evidence{margin-top:13px;padding:12px;background:#0e2024;border-radius:9px;border:1px solid var(--line)}.evidence li{font-size:12px;overflow-wrap:anywhere;margin:4px 0}
-.notice{padding:12px 16px;border:1px solid #715f43;border-radius:12px;color:#eed5aa;background:#342d21;margin:14px 0 18px;font-size:13px}.foot{margin-top:23px;font-size:12px;color:var(--muted)}.foot code{color:var(--mint)}
+.insights{padding:16px 18px;margin:0 0 18px}.insights h2{margin:0 0 9px}.insights p{font-size:12px;color:var(--muted);margin:0 0 12px}.quicklinks{display:flex;gap:8px;flex-wrap:wrap}.quicklinks a{display:inline-block;padding:7px 11px;background:#17342f;border:1px solid #466d5e;border-radius:9px;color:#a5e7c9;font-size:12px;text-decoration:none}.quicklinks a:focus-visible{outline:2px solid #fff}.notice{padding:12px 16px;border:1px solid #715f43;border-radius:12px;color:#eed5aa;background:#342d21;margin:14px 0 18px;font-size:13px}.foot{margin-top:23px;font-size:12px;color:var(--muted)}.foot code{color:var(--mint)}
 @media(max-width:860px){.layout{grid-template-columns:1fr}.sidebar{position:static}.results{max-height:240px}}@media(prefers-reduced-motion:no-preference){.finding,.filter,.toggle{transition:background .18s,border-color .18s}}@media print{.canvasControls,.filters,.search{display:none}.canvas{max-height:none;overflow:visible}.results{max-height:none}.layout{display:block}.sidebar{page-break-after:always}body{background:white;color:black}.panel,.stat{background:white;color:black}}
 '''
 _JS = r'''
@@ -146,6 +146,23 @@ def write_dashboard(out: Path, title: str, findings: dict, manifest: dict,
     stats = ''.join(f'<div class="stat"><strong>{int(v)}</strong><span>{h(k)}</span></div>' for k,v in sorted(findings.get('counts', {}).items()))
     if not stats:
         stats = '<div class="stat"><strong>0</strong><span>Classified findings</span></div>'
+    # Known, same-directory artifact links only; never use untrusted paths here.
+    intelligence_artifacts = (
+        ("Evidence passports", "evidence-passports.json"),
+        ("Investigations", "investigations.json"),
+        ("Assumption debt", "assumption-debt.json"),
+        ("Specification conflicts", "spec-conflicts.json"),
+        ("Readiness matrix", "readiness-matrix.json"),
+        ("Approval draft", "approval-draft.json"),
+        ("Impact preview", "impact-preview.json"),
+        ("Artifact handoff", "audit-handoff.json"),
+    )
+    buttons = ''.join(f'<a href="{filename}" rel="nofollow">{h(label)}</a>'
+                      for label, filename in intelligence_artifacts if (out / filename).is_file())
+    insights = (f'<section class="panel insights"><h2>Evidence intelligence · Preview</h2>'
+                '<p>Structured, review-only reports. Evidence passports are not signed attestations, '
+                'impact paths are possibilities, and the approval draft does not authorize edits.</p>'
+                f'<nav class="quicklinks" aria-label="Evidence intelligence reports">{buttons}</nav></section>') if buttons else ''
     repo = manifest.get('project', {}).get('repo') or 'unknown'
     sha = manifest.get('project', {}).get('revision') or 'unversioned'
     page = f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -155,6 +172,7 @@ def write_dashboard(out: Path, title: str, findings: dict, manifest: dict,
 <h1>{h(title)}</h1><p class="sub muted">Trace each approved requirement through source evidence and observed tests. Search, filter, zoom and inspect connections—without installing a dashboard server.</p>
 <div class="meta">Repository: {h(repo)}<br>Revision: <span class="mono">{h(sha)}</span></div>
 <div class="stats" aria-label="Finding counts">{stats}</div>
+{insights}
 <p class="notice">Graph lines group evidence by requirement, not direct test-to-code coverage. A mapped file is not proof of working behavior. JUnit reports are not executed here. Unknown does not mean missing, and this dashboard does not approve or make code changes.</p>
 <div class="layout"><aside class="panel sidebar" aria-label="Findings"><div class="panelhead"><h2>Findings</h2><span class="muted" id="resultCount" aria-live="polite"></span></div>
 <div class="controls"><label for="search" class="eyebrow">Search the atlas</label><input id="search" class="search" type="search" placeholder="Find feature, ID or issue…" autocomplete="off"><div id="filters" class="filters" aria-label="Filter by status"></div><button class="toggle" id="focusAll" type="button">Clear filters</button></div><div id="results" class="results"></div></aside>

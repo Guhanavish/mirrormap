@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Guhanavish/mirrormap/blob/main/schemas/behavior-journeys.schema.json",
+  "title": "Imported behavioral journey map",
+  "description": "Local, informational MirrorMap artifact. Does not grant execution authority.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "authority",
+    "journeys"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "authority": {
+      "const": "user_supplied_mapping_only"
+    },
+    "journeys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "steps"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,160}$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "status"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,160}$"
+                },
+                "status": {
+                  "enum": [
+                    "unverified",
+                    "reported_pass",
+                    "reported_failure"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

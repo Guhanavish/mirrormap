@@ -120,6 +120,22 @@ This is intentionally **structural inventory only**, not a false promise that th
 
 The included intentionally incomplete fixture yields **three `unknown` requirements** when no reviewed implementation links are supplied. That's the correct, conservative answer. See [the worked example](examples/README.md) for importing reviewed links and absence evidence to get a meaningful gap report.
 
+## Evidence Intelligence — v0.5 development preview
+
+**What do we know, what are we missing, and what should be checked next?** A fresh audit now generates feature-level [evidence passports and investigation suggestions](docs/guides/evidence-intelligence.md), explicit conflict and assumption-debt reports, evidence freshness, an unsigned approval draft, and a verified artifact handoff. The dashboard links to these local JSON outputs.
+
+```bash
+python -m projectmirror audit examples/demo-app \
+  --spec examples/demo-app/requirements.md --approved-spec --mode deep \
+  --links examples/fixture-reviewed-links.json \
+  --absence examples/fixture-reviewed-absence.json \
+  --changed-path auth.py
+# Copy the reported output directory, then run:
+python -m projectmirror verify-handoff --out /path/to/fresh/audit
+```
+
+For the *bundled sample only*, this yields 1 missing and 2 unverified features. **The new outputs are not verified production behavior, automatic browser tests, AI-generated fixes, or approval authorization.** Handoffs prove byte integrity, not provenance. [Implementation and remaining research roadmap](docs/ROADMAP_NEXT.md) · [Evaluation fixture](examples/intelligence/expected.json).
+
 ## Interactive Evidence Atlas
 
 Search findings, filter by classification, click graph nodes, zoom the three-lane **Intent → Implementation → Verification** graph, and inspect directly linked evidence without sending project data to a server. The dashboard is an **offline HTML document**, not a hosted tool or execution interface.
@@ -240,7 +256,8 @@ Maintainers: [launch and community kit](docs/launch/README.md) · [release check
 - [x] **v0.2 Evidence Atlas:** one-command audit, offline dashboard, five scoped modes, doctor, installer, candidate links, baseline comparison, Python API, experimental MCP and CI example.
 - [x] **v0.3 Route Atlas:** conservative Next.js and FastAPI route candidates, reusable read-only GitHub composite action, and richer integration guides.
 - [x] **v0.4 Interactive Atlas + JUnit import:** functional offline graph/search/zoom/detail UI and opt-in existing JUnit XML ingestion, plus optional GitHub Action evidence inputs.
-- [ ] **v0.5 Wider verification:** AST-depth adapters, optional permissioned browser probes, real coverage import and reviewer-friendly link assignment.
+- [x] **v0.5 development preview:** evidence passports, investigation queue, explicit conflicts, revision freshness, scoped impact previews, unsigned approvals, artifact handoffs and fixture evaluation.
+- [ ] **v0.5+ Deeper verification:** AST-depth adapters, optional permissioned browser probes, real coverage import, reviewer-friendly link assignment and real-world benchmark evaluation.
 - [ ] **v0.6 Connected workflows:** validated cross-agent installers, impact-aware PR audit and CI annotations.
 - [ ] **v1.0 Full experience:** hosted documentation/demo, independent verification integrations, host-enforced approval UI and evaluated plugin distribution.
 

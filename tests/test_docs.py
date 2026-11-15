@@ -32,7 +32,7 @@ class DocsTests(unittest.TestCase):
         bundle = (ROOT / "projectmirror/skill_bundle/SKILL.md").read_text(encoding="utf-8")
         self.assertEqual(main, bundle)
         self.assertIn("name: mirrormap", main)
-        self.assertIn("version: \"0.4.0\"", main)
+        self.assertIn("version: \"0.5.0b1\"", main)
         root_refs = ROOT / "references"
         bundled_refs = ROOT / "projectmirror" / "skill_bundle" / "references"
         root_names = {p.name for p in root_refs.glob("*.md")}

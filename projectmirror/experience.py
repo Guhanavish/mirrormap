@@ -36,6 +36,10 @@ def _output_path(repo: Path, out: str | Path | None) -> Path:
     if out is None:
         out = Path(tempfile.mkdtemp(prefix="mirrormap-audit-"))
     result = ensure_output(repo, Path(out).expanduser())
+    # A fresh audit may not reuse an old evidence directory: stale JUnit/maps
+    # must never be silently included in a subsequent handoff.
+    if result.exists() and any(result.iterdir()):
+        raise AuditError("Audit output directory is not empty. Choose a fresh --out to avoid stale evidence")
     result.mkdir(parents=True, exist_ok=True)
     return result
 
@@ -132,7 +136,9 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
                   absence: str | Path | None = None,
                   max_files: int | None = None,
                   junit_sources: list[str | Path] | None = None,
-                  test_map: str | Path | None = None) -> dict:
+                  test_map: str | Path | None = None,
+                  changed_paths: list[str] | None = None,
+                  journeys: str | Path | None = None) -> dict:
     """Run the read-only audit pipeline. Return generated artifacts and counts.
 
     No source code is run. A requirement with no reviewed link is UNKNOWN.
@@ -191,13 +197,34 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
         save(target / "verification-map.json", v)
     l = load(_safe_external_file(project, links, "Reviewed links")) if links else {"links": []}
     a = load(_safe_external_file(project, absence, "Absence evidence")) if absence else {"confirmations": []}
-    findings = compare(i, implementation, v, l, a, m)
+    from .intelligence import (add_conflict_plan_tasks, apply_declared_conflicts, assumption_debt,
+                               draft_approval_capsule, evidence_passports,
+                               handoff_manifest, impact_preview, investigation_queue,
+                               readiness_matrix, spec_conflicts,
+                               freshness_report, behavior_journeys)
+    conflicts = spec_conflicts(i)
+    findings = apply_declared_conflicts(compare(i, implementation, v, l, a, m), conflicts)
+    save(target / "spec-conflicts.json", conflicts)
     save(target / "findings.json", findings)
     (target / "audit-report.md").write_text(markdown_report(findings, m), encoding="utf-8")
-    plan = create_plan(findings, m, implementation)
+    plan = add_conflict_plan_tasks(create_plan(findings, m, implementation), findings)
     save(target / "plan.json", plan)
     (target / "remediation-plan.md").write_text(markdown_plan(plan), encoding="utf-8")
     (target / "mindmap.mmd").write_text(render(findings), encoding="utf-8")
+    save(target / "evidence-passports.json", evidence_passports(i, implementation, v, findings, m))
+    candidate_hints = load(target / "candidate-links.json") if (target / "candidate-links.json").is_file() else None
+    save(target / "investigations.json", investigation_queue(findings, i, candidate_hints))
+    save(target / "assumption-debt.json", assumption_debt(findings, i))
+    save(target / "readiness-matrix.json", readiness_matrix(findings))
+    save(target / "evidence-freshness.json", freshness_report(v, m))
+    if journeys is not None:
+        journey_input = load(_safe_external_file(project, journeys, "Journey evidence"))
+        save(target / "behavior-journeys.json", behavior_journeys(journey_input, i, v, m))
+    save(target / "approval-draft.json", draft_approval_capsule(plan))
+    scopes = changed_paths if changed_paths is not None else (
+        m.get("pr_scope", {}).get("changed_files", []) if mode == "pr" and m.get("pr_scope", {}).get("available") else [])
+    if scopes:
+        save(target / "impact-preview.json", impact_preview(implementation, l, scopes))
     _html_report(target, "Project audit", findings, m, implementation, v)
     if mode == "pr":
         save(target / "pr-scope.json", m["pr_scope"])
@@ -207,6 +234,9 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
         else:
             m["limitations"].append("No baseline supplied: no drift comparison performed")
             save(target / "audit-manifest.json", m)
+    handoff_files = {f.name: f for f in sorted(target.iterdir())
+                     if f.is_file() and f.suffix.lower() in {".json", ".md", ".mmd", ".html"}}
+    save(target / "audit-handoff.json", handoff_manifest(m, handoff_files))
     return {"directory": str(target), "mode": mode, "counts": findings["counts"],
             "files_scanned": scan["scanned_files"], "limitations": m["limitations"]}
 
@@ -263,6 +293,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--max-files", type=int, default=None)
     p.add_argument("--junit", type=Path, action="append", default=[], help="existing JUnit XML file or directory; never runs tests")
     p.add_argument("--test-map", type=Path, help="explicitly reviewed test-to-criteria mapping JSON for JUnit evidence")
+    p.add_argument("--changed-path", action="append", default=[],
+                   help="repository-relative modified path for possible-impact preview (repeatable)")
+    p.add_argument("--journeys", type=Path, help="import a user-supplied behavioral-journey map; no browser execution")
     p = commands.add_parser("evidence", help="collect existing JUnit XML reports into an initialized audit folder")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--junit", type=Path, action="append", required=True)
@@ -276,6 +309,11 @@ def main(argv: list[str] | None = None) -> int:
     p = commands.add_parser("baseline-diff", help="compare findings with a reviewed baseline")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--baseline", type=Path, required=True)
+    p = commands.add_parser("verify-handoff", help="verify exported artifact bytes without granting code-edit approval")
+    p.add_argument("--out", type=Path, required=True)
+    p = commands.add_parser("evaluate", help="score predictions against independently reviewed ground-truth JSON maps")
+    p.add_argument("--expected", type=Path, required=True)
+    p.add_argument("--actual", type=Path, required=True)
     p = commands.add_parser("install-skill", help="preview or install the portable skill to a chosen agent skills folder")
     p.add_argument("--dest", type=Path, required=True)
     p.add_argument("--apply", action="store_true", help="create files (off by default; never overwrites)")
@@ -286,7 +324,9 @@ def main(argv: list[str] | None = None) -> int:
             res = audit_project(args.repo, args.spec, args.out, args.mode, spec_approved=args.approved_spec,
                                 base=args.base, baseline=args.baseline, links=args.links, verification=args.verification,
                                 absence=args.absence, max_files=args.max_files,
-                                junit_sources=args.junit, test_map=args.test_map)
+                                junit_sources=args.junit, test_map=args.test_map,
+                                changed_paths=args.changed_path or None,
+                                journeys=args.journeys)
         elif args.command == "evidence":
             from .evidence import collect_junit
             out = args.out.expanduser().resolve()
@@ -327,6 +367,18 @@ def main(argv: list[str] | None = None) -> int:
             m = load(out / "audit-manifest.json")
             ensure_output(Path(m["project"]["repo"]), out)
             res = baseline_comparison(out, args.baseline)
+        elif args.command == "verify-handoff":
+            from .intelligence import verify_handoff
+            out = args.out.expanduser().resolve()
+            m = load(out / "audit-manifest.json")
+            ensure_output(Path(m["project"]["repo"]), out)
+            res = verify_handoff(out, load(out / "audit-handoff.json"))
+            if not res["valid"]:
+                print(json.dumps(res, indent=2), file=sys.stderr)
+                return 2
+        elif args.command == "evaluate":
+            from .intelligence import evaluation_summary
+            res = evaluation_summary(load(args.expected), load(args.actual))
         elif args.command == "install-skill":
             res = install_skill(args.dest, apply=args.apply)
         else:

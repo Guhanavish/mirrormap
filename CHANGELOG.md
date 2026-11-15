@@ -36,6 +36,22 @@
 
 # Changelog
 
+## [0.5.0b1] — 2026-11-15 — Evidence Intelligence (development preview, not a GitHub Release)
+
+### Added
+- Feature evidence passports (source hashes, imported verification records, revision freshness and explicit confidence limits).
+- Read-only Unknown Resolution investigations, assumption-debt and per-dimension readiness outputs.
+- Explicit specification-conflict declarations and acceptance-criterion collisions, with human-review tasks instead of silent resolution.
+- Limited change-impact previews based only on reviewed source links; optional imported behavior-journey steps.
+- Non-authorizing approval drafts and SHA-256 audit handoff verification.
+- Local fixture-level evaluation metrics, dedicated JSON schema contracts, tests and offline dashboard links to intelligence reports.
+
+### Safety and compatibility
+- No application/test execution or code edits; evidence and approval claims remain host-verifiable only.
+- An audit now rejects nonempty output directories to prevent accidentally reusing stale evidence. Use a fresh `--out` for each run.
+- This is a source branch preview, **not** an official v0.5 GitHub Release. Advanced integrations remain in `docs/ROADMAP_NEXT.md`.
+
+
 All notable changes are documented here. This project is in early beta; no production-stability guarantee is implied.
 
 ## [0.1.0] — 2026-11-08
