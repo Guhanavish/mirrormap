@@ -1,5 +1,10 @@
 ## Unreleased — Relay continuity hardening and website
 
+- Fix Cursor `beforeSubmitPrompt` output to avoid unsupported context injection; preserve metadata-only event capture.
+- Add read-only `relay field-check` CLI validation for recorded cross-agent lineage, safety, workspace fingerprints, and post-handoff milestones.
+- Add regression coverage and documentation distinguishing synthetic events, recorded handoff validity and real-host certification.
+- GitHub topic metadata correction and real-host interoperability signoff still require authorized GitHub settings and running installed host apps.
+
 - Add conditional user-prompt hook reminders without retaining the user's input.
 - Expand CLI-driven synthetic handoff tests and add live-host field validation instructions.
 - Update the hosted website content to include Relay v0.6 and Evidence Intelligence v0.5 development previews.

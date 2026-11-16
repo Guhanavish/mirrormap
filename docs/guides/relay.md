@@ -116,3 +116,15 @@ If you are using MirrorMap's read-only MCP server, configure `MIRRORMAP_ALLOWED_
 - **Resume says workspace differs:** Check Git status, untracked files, the branch and HEAD. Don't overwrite new work to make the checkpoint match.
 - **Tool appears pending:** Check whether it completed in the real project; don't repeat irreversible commands automatically.
 - **Installing a skill didn't activate tracking:** This is expected. Install the Python CLI and explicitly apply the lifecycle hook adapter once.
+
+## Validate a real agent-to-agent handoff
+
+After the receiving agent records a new task milestone **after** adoption:
+
+```sh
+python -m projectmirror relay field-check --source OLD_SESSION_ID --target NEW_SESSION_ID
+```
+
+The command checks recorded workspace consistency, journal integrity, task notes, agent lineage, and an Agent B milestone after the handoff. It returns exit code 0 for a complete recorded handoff and 1 for failed checks. It does **not** authenticate that the hook events originated from a genuine host; perform the separate [real-agent validation protocol](relay-field-validation.md) before making compatibility claims.
+
+**Cursor limitation:** Its `beforeSubmitPrompt` hook does not support injecting model context. MirrorMap records the event where possible but injects initial reminder context only through `sessionStart`. See [Cursor hooks](https://cursor.com/docs/hooks).
