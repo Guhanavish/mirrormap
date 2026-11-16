@@ -84,6 +84,21 @@ class RelayTests(unittest.TestCase):
         with self.assertRaises(AuditError):
             relay.adopt_session(prior, newer, source_stopped=True)
 
+    def test_parallel_hooks_keep_a_valid_single_event_chain(self):
+        from concurrent.futures import ThreadPoolExecutor
+        sid = self.start('codex', 'parallel')
+        def one(i):
+            return relay.ingest_hook('codex', 'PostToolUse',
+                      {'session_id':'parallel', 'cwd':str(self.repo),
+                       'tool_use_id':f'T{i}', 'tool_name':'Bash'}, self.repo)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(one, range(24)))
+        self.assertTrue(all(x['recorded'] for x in results))
+        self.assertEqual(relay.verify(sid)['journal_integrity'], 'valid')
+        db = sqlite3.connect(str(self.db/'sessions.sqlite3'))
+        self.assertEqual(db.execute('SELECT COUNT(*) FROM events WHERE session_id=?',(sid,)).fetchone()[0],26)
+        db.close()
+
     def test_adoption_refuses_drift_or_pending_unsafe_tools(self):
         a=self.start('claude','a')
         b=self.start('codex','b')

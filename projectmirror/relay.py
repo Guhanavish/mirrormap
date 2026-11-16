@@ -239,6 +239,7 @@ def _create(conn: sqlite3.Connection, agent: str, native: str, workspace: Path) 
         raise AuditError("Host session identifier missing or invalid")
     sid = _session_id(agent, native, workspace)
     with conn:
+        conn.execute("BEGIN IMMEDIATE")
         exists = conn.execute("SELECT id FROM sessions WHERE id=?", (sid,)).fetchone()
         if not exists:
             timestamp = int(time.time())
@@ -273,6 +274,7 @@ def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | Non
     try:
         sid = _create(conn, agent, native, workspace)
         with conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT status FROM sessions WHERE id=?", (sid,)).fetchone()
             if row["status"] == "resumed_elsewhere":
                 return {"recorded": False, "reason": "session-handed-off", "session_id": sid}
@@ -345,6 +347,7 @@ def record_note(sid: str, *, title: str | None = None, goal: str | None = None,
     conn = _connect()
     try:
         with conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = _get_session(conn, sid)
             updates = {"title": _text(title) if title is not None else row["title"],
                        "goal": _text(goal) if goal is not None else row["goal"],
@@ -368,6 +371,7 @@ def checkpoint(sid: str) -> dict:
     conn = _connect()
     try:
         with conn:
+            conn.execute("BEGIN IMMEDIATE")
             row = _get_session(conn, sid)
             snapshot = workspace_snapshot(row["workspace"])
             conn.execute("UPDATE sessions SET snapshot=? WHERE id=?", (_canonical(snapshot), sid))
@@ -473,6 +477,7 @@ def adopt_session(source_sid: str, target_sid: str, *, source_stopped: bool = Fa
     conn = _connect()
     try:
         with conn:
+            conn.execute("BEGIN IMMEDIATE")
             src = _get_session(conn, source_sid)
             dst = _get_session(conn, target_sid)
             if src["workspace"] != dst["workspace"] or src["agent"] == dst["agent"]:
