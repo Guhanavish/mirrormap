@@ -39,7 +39,8 @@ class MCPProtocolTests(unittest.TestCase):
     def test_list_includes_exact_allowlisted_tools_and_schemas(self):
         tools = rpc("tools/list")["result"]["tools"]
         self.assertEqual({t["name"] for t in tools},
-                         {"mirrormap_doctor", "mirrormap_audit", "mirrormap_read_report"})
+                         {"mirrormap_doctor", "mirrormap_audit", "mirrormap_read_report",
+                     "mirrormap_relay_sessions", "mirrormap_relay_resume"})
         self.assertTrue(all(t["inputSchema"]["additionalProperties"] is False for t in tools))
         self.assertEqual(next(t for t in tools if t["name"] == "mirrormap_audit")["inputSchema"]["required"], ["repo"])
 

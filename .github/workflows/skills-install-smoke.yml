@@ -53,6 +53,7 @@ jobs:
             --skill mirrormap -a codex --copy -y
           skill_file=".agents/skills/mirrormap/SKILL.md"
           test -s "$skill_file"
+          test -s ".agents/skills/mirrormap/references/relay.md"
           grep -q '^name: mirrormap' "$skill_file"
           echo "Installed file: $skill_file"
       - name: Reproduce both example findings from source

@@ -15,7 +15,7 @@ from .core import AuditError, ensure_output, load
 from .experience import audit_project, doctor
 
 PROTOCOL = "2025-06-18"
-VERSION = "0.5.0b1"
+VERSION = "0.6.0b1"
 MAX_MESSAGE_CHARS = 1_000_000
 MAX_REPORT_CHARS = 30_000
 
@@ -31,6 +31,13 @@ TOOLS = [
          "base": {"type": "string", "description": "Git base ref for PR inventory"},
          "junit": {"type": "string", "description": "Optional existing JUnit XML report under MIRRORMAP_ALLOWED_ROOTS; only unreviewed candidates"}},
          "additionalProperties": False}},
+    {"name": "mirrormap_relay_sessions", "description": "List local opt-in Relay sessions only within MIRRORMAP_ALLOWED_ROOTS. Read-only.",
+     "inputSchema": {"type": "object", "properties": {
+         "workspace": {"type": "string", "description": "Optional project workspace path within allowlisted roots"}},
+         "additionalProperties": False}},
+    {"name": "mirrormap_relay_resume", "description": "Verify and present a single local Relay checkpoint. Does not authorize or execute code.",
+     "inputSchema": {"type": "object", "required": ["session_id"], "properties": {
+         "session_id": {"type": "string"}}, "additionalProperties": False}},
     {"name": "mirrormap_read_report", "description": "Read one generated MirrorMap report for an allowlisted project, capped to 30,000 characters.",
      "inputSchema": {"type": "object", "required": ["out"], "properties": {
          "out": {"type": "string"},
@@ -84,6 +91,25 @@ def invoke(name: str, args: dict) -> dict:
         junit = _allowlisted(Path(args["junit"])) if "junit" in args else None
         return audit_project(project, spec=spec, out=args.get("out"), mode=args.get("mode", "quick"),
                              base=args.get("base"), junit_sources=[junit] if junit else None)
+    if name == "mirrormap_relay_sessions":
+        from .relay import list_sessions
+        if "workspace" in args:
+            requested = _allowlisted(Path(args["workspace"]))
+            sessions = list_sessions(requested)
+        else:
+            # Filter *before* serializing metadata: don't expose unrelated local projects.
+            if not os.getenv("MIRRORMAP_ALLOWED_ROOTS", "").strip():
+                raise AuditError("MIRRORMAP_ALLOWED_ROOTS is required for MCP project access")
+            sessions = [row for row in list_sessions()
+                        if any(Path(root).expanduser().resolve() == Path(row["workspace"]).resolve()
+                               or Path(root).expanduser().resolve() in Path(row["workspace"]).resolve().parents
+                               for root in os.getenv("MIRRORMAP_ALLOWED_ROOTS", "").split(os.pathsep) if root)]
+        return {"sessions": sessions, "read_only": True}
+    if name == "mirrormap_relay_resume":
+        from .relay import inspect, resume
+        session = inspect(args["session_id"])
+        _allowlisted(Path(session["workspace"]))
+        return resume(args["session_id"])
     if name == "mirrormap_read_report":
         out = Path(args["out"]).expanduser().resolve()
         m = load(out / "audit-manifest.json")
