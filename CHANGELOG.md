@@ -1,3 +1,18 @@
+## [0.6.0b1] — MirrorMap Relay (development preview; no official GitHub Release)
+
+### Added
+- Opt-in, project-filtered Codex/Claude Code/Cursor hook configuration previews, installs and removals.
+- Privacy-preserving SQLite session recorder with Git fingerprints, pending-tool tracking and bounded local event hash chains.
+- CLI session list, inspect, verify, structured notes, checkpoint and read-only resume summaries, plus explicit cross-agent session adoption after safety checks.
+- Two allowlist-filtered MCP tools for session discovery and checkpoint recovery.
+- Agent skill instructions, detailed Relay guide and synthetic interruption, privacy, tamper, installation and MCP regression tests.
+
+### Honest limitations
+- Hook support is based on documented lifecycle schemas; not all host versions or crash scenarios are live-tested.
+- Skill installation alone does not start recording. User must apply/trust hooks and install the Python CLI separately.
+- No hidden model thoughts or transcript recovery, automatic execution, cross-device sync, provenance authentication, or distributed session locks.
+- Sessions are local to the OS user and auto-tracking does not guarantee semantic task details unless milestones are recorded.
+
 ## [0.4.0] — 2026-11-08 — Evidence Atlas (beta)
 
 ### Added

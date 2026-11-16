@@ -1,10 +1,10 @@
 ---
 name: mirrormap
-description: Audit software projects against approved requirements using independent intent, implementation, and verification maps. Detect missing or broken features, specification drift, and unverified behavior; visualize findings and create a human-reviewed remediation plan. Use when asked to map a project, audit an app, find missing features, compare code to a spec, investigate drift, or plan safe fixes.
+description: Audit software projects against approved requirements using independent intent, implementation, and verification maps. Detect missing or broken features, specification drift, and unverified behavior; visualize findings and create a human-reviewed remediation plan. Use when asked to map a project, audit an app, find missing features, compare code to a spec, investigate drift, plan safe fixes, list previous coding-agent sessions, or resume a task via Relay.
 license: MIT
 compatibility: Requires Python 3.10+ for the bundled optional audit CLI and read access to the project. Runtime and browser checks require additional tools provided by the host agent.
 metadata:
-  version: "0.5.0b1"
+  version: "0.6.0b1"
 ---
 
 # MirrorMap — Evidence Atlas for project intelligence
@@ -72,6 +72,23 @@ See `docs/guides/evidence-intelligence.md` and `docs/ROADMAP_NEXT.md` in the sou
 ### MCP / agent integration
 
 If the agent uses the experimental MCP server, configure `MIRRORMAP_ALLOWED_ROOTS` to restrict inspection to trusted project directories. MCP tools are read-only with respect to inspected source. They do not authorize edits. If the server is not available, use the portable CLI workflow directly; do not pretend tools exist.
+
+## MirrorMap Relay — cross-agent session selection (v0.6 development preview)
+
+When asked to **list past agent sessions**, **resume from another agent**, or **continue from the last checkpoint**, use the **read-only** Relay commands:
+
+```bash
+python -m projectmirror relay sessions
+python -m projectmirror relay resume --session SESSION_ID
+```
+
+1. Show the available sessions to the user. Do not guess a session ID if multiple sessions match; let the user select one.
+2. Load that session with `relay resume`, confirm the event journal and live workspace fingerprint, and identify the explicitly recorded `next_step` and uncertain pending tools.
+3. If the project or journal diverged, **reconcile** before editing. A checkpoint is a record, not an authorization to execute code or repeat shell commands.
+4. If a new host session is already recording, and the user confirms Agent A is stopped, use `relay adopt --from OLD_SESSION_ID --into NEW_SESSION_ID --confirm-source-stopped` to link progress to Agent B. Otherwise keep the handoff read-only and do not infer that Agent A has stopped.
+5. On successful transfer, continue tracking via an installed agent hook. Record milestones with `relay note --session SESSION_ID --next ... --done ...`; never include secrets.
+
+Relay **does not record automatically just because `SKILL.md` is installed**. Local automatic recording requires the installed CLI and a separately reviewed **opt-in hook configuration** in Agent A. Agent B must be able to read the same local session store; cloud agents and other computers don't automatically share it. See [the setup and limitations](references/relay.md) for the project-filtered opt-in installer. No hidden thoughts/transcripts or unrecorded commands can be reconstructed.
 
 ## 2. Read-only CLI workflow
 

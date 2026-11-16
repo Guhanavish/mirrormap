@@ -29,6 +29,8 @@ jobs:
           python -m projectmirror --help
           python -m projectmirror doctor
           python -m projectmirror audit --help
+          python -m projectmirror relay --help
+          python -m projectmirror relay install-hooks --help
       - name: Build package
         run: python -m pip wheel --no-deps . --wheel-dir dist
       - name: Check wheel contents and excluded launch assets
@@ -41,7 +43,7 @@ jobs:
           with ZipFile(wheels[0]) as wheel:
               names = wheel.namelist()
           assert 'projectmirror/skill_bundle/SKILL.md' in names
-          assert sum(n.startswith('projectmirror/skill_bundle/references/') for n in names) == 4
+          assert sum(n.startswith('projectmirror/skill_bundle/references/') for n in names) == 5
           assert not any('docs/launch/' in n or n.endswith('launch-stats.csv')
                          or n.endswith('mirrormap-30s-demo.mp4') for n in names)
           print('Packaged skill and reference files verified; launch assets excluded')

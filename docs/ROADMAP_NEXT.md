@@ -35,3 +35,9 @@
 ## Recommended next release
 
 Prioritize a real-world fixture benchmark, then an opt-in Playwright trace importer (not automatic browser execution) and a verified, scoped read-only impact traversal. A hosted multi-user dashboard and automatic code-changing executor should not precede a complete threat model.
+
+## v0.6 Relay integration (development preview)
+
+The read-only opt-in Relay core now supports local session discovery, host hook metadata recording, limited task milestones, and checkpoint consistency checks. See [Relay guide](guides/relay.md).
+
+**Still to validate:** real Codex/Claude/Cursor event coverage, long-running agent crash recovery in each host, post-crash incomplete operations, worktree ownership locks, authenticated cross-host transfer, retention controls, and semantic state capture from opt-in agent adapters. Installing a skill alone still does not activate hooks or grant execution authorization.

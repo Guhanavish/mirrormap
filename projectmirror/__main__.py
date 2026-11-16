@@ -29,6 +29,9 @@ def safe_audit_dir(path: Path) -> Path:
 
 def cmd_main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] == "relay":
+        from .relay import main as relay_main
+        return relay_main(argv[1:])
     if argv and argv[0] in {"audit", "evidence", "routes", "doctor", "dashboard", "baseline-diff", "verify-handoff", "evaluate", "install-skill", "mcp"}:
         from .experience import main
         return main(argv)

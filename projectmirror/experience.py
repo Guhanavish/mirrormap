@@ -277,6 +277,11 @@ def install_skill(destination: Path, *, apply: bool) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] == "relay":
+        from .relay import main as relay_main
+        return relay_main(list(argv[1:]))
     parser = argparse.ArgumentParser(prog="mirrormap", description="Read-only project intelligence and evidence-backed audits")
     commands = parser.add_subparsers(dest="command", required=True)
     p = commands.add_parser("audit", help="one-command structural audit and evidence-backed report")

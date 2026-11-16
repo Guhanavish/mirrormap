@@ -43,16 +43,17 @@ jobs:
           node --version
           npm --version
           python --version
-      - name: Install published MirrorMap skill in a clean directory
+      - name: Install exact PR skill from checked-out source
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "${RUNNER_TEMP}/mirrormap-skills-install"
           cd "${RUNNER_TEMP}/mirrormap-skills-install"
-          npx --yes skills@1.7.6 add Guhanavish/mirrormap \
+          npx --yes skills@1.7.6 add "$GITHUB_WORKSPACE" \
             --skill mirrormap -a codex --copy -y
           skill_file=".agents/skills/mirrormap/SKILL.md"
           test -s "$skill_file"
+          test -s ".agents/skills/mirrormap/references/relay.md"
           grep -q '^name: mirrormap' "$skill_file"
           echo "Installed file: $skill_file"
       - name: Reproduce both example findings from source

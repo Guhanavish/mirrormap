@@ -17,7 +17,7 @@
 [![Creator](https://img.shields.io/badge/CREATOR-Visit_Website-18313A?style=for-the-badge&logo=vercel&logoColor=white)](https://guhanavish.vercel.app/)
 [![Contribute](https://img.shields.io/badge/CONTRIBUTE-Open_Source-18313A?style=for-the-badge&logo=github&logoColor=white)](CONTRIBUTING.md)
 
-[**Why it exists**](#why-mirrormap-exists) · [**How it works**](#the-evidence-atlas) · [**Interactive Atlas**](#interactive-evidence-atlas) · [**JUnit evidence**](#import-test-evidence-without-running-code) · [**Audit modes**](#one-engine-five-views) · [**Integrations**](#meet-your-agent-where-it-works) · [**Roadmap**](#roadmap)
+[**Relay session handoff**](#mirrormap-relay--agent-context-continuity) · [**Why it exists**](#why-mirrormap-exists) · [**How it works**](#the-evidence-atlas) · [**Interactive Atlas**](#interactive-evidence-atlas) · [**JUnit evidence**](#import-test-evidence-without-running-code) · [**Audit modes**](#one-engine-five-views) · [**Integrations**](#meet-your-agent-where-it-works) · [**Roadmap**](#roadmap)
 
 </div>
 
@@ -44,6 +44,29 @@ npx skills add Guhanavish/mirrormap
 ```
 
 This requires a recent Node.js runtime for the installer (the Skills CLI's current minimum is Node.js 22.20+); MirrorMap's underlying Python CLI separately requires Python 3.10+. **Installation with every individual agent has not been certified**. You can always use the repository directly with `python -m projectmirror`, or install the root [`SKILL.md`](SKILL.md) manually following your agent's instructions. See the [install and integration guide](docs/getting-started.md).
+
+## MirrorMap Relay — Agent Context Continuity
+
+**v0.6.0b1 development preview.** Relay tracks **agent session metadata automatically when the user explicitly enables native lifecycle hooks**, even if MirrorMap is never summoned during Agent A's work. Agent B can then invoke the skill, list recorded sessions, select one, verify its latest checkpoint, and receive a safe read-only resume brief.
+
+**Important:** A copied `SKILL.md` on its own cannot listen to agent lifecycle events. Install the Python package and configure/approve the native hooks *once per agent*, for the selected project:
+
+```bash
+python -m pip install .
+python -m projectmirror relay install-hooks --agent codex --project /absolute/path/to/app  # preview
+python -m projectmirror relay install-hooks --agent codex --project /absolute/path/to/app --apply
+# On Agent B (same machine/user, shared local store):
+python -m projectmirror relay sessions
+python -m projectmirror relay resume --session SESSION_ID
+```
+
+Also supported as **adapter previews**: `--agent claude` and `--agent cursor`, each requiring their own reviewed hook install and a compatible host. The input schemas are tested using simulated events; real host behavior, especially crash recovery, requires separate end-to-end testing. Both `mirrormap relay ...` and `python -m projectmirror relay ...` work after installing the CLI.
+
+To link the continuing agent's new tracked session to the previous one, only after confirming the old agent stopped, use `python -m projectmirror relay adopt --from OLD_SESSION_ID --into NEW_SESSION_ID --confirm-source-stopped`. If the checkpoint changed or contains unresolved tools, the adoption fails instead of silently claiming continuity.
+
+Relay stores a **private, local SQLite event journal** and bounded Git file fingerprints, not raw prompts, complete transcripts, secrets or source contents. A host-generated SessionStart instruction encourages the agent to record structured milestones (`relay note`) so the next agent knows the actual goal and unfinished step. When the host doesn't supply that information, the recorder cannot infer it. Changed workspaces and pending commands are flagged for reconciliation; **resuming never authorizes code edits**.
+
+[**Relay setup, commands, privacy and limitations**](docs/guides/relay.md) · [**Agent skill Relay instructions**](references/relay.md)
 
 ## Why MirrorMap exists
 
@@ -258,7 +281,8 @@ Maintainers: [launch and community kit](docs/launch/README.md) · [release check
 - [x] **v0.4 Interactive Atlas + JUnit import:** functional offline graph/search/zoom/detail UI and opt-in existing JUnit XML ingestion, plus optional GitHub Action evidence inputs.
 - [x] **v0.5 development preview:** evidence passports, investigation queue, explicit conflicts, revision freshness, scoped impact previews, unsigned approvals, artifact handoffs and fixture evaluation.
 - [ ] **v0.5+ Deeper verification:** AST-depth adapters, optional permissioned browser probes, real coverage import, reviewer-friendly link assignment and real-world benchmark evaluation.
-- [ ] **v0.6 Connected workflows:** validated cross-agent installers, impact-aware PR audit and CI annotations.
+- [x] **v0.6 Relay preview:** local hook-based recorder, project-filtered opt-in setup, agent-to-agent session selection, integrity checks and read-only continuation.
+- [ ] **v0.6+ Relay validation:** live agent hook compatibility, ownership locks, high-fidelity task metadata, encrypted cross-device synchronization, measured crash recovery.
 - [ ] **v1.0 Full experience:** hosted documentation/demo, independent verification integrations, host-enforced approval UI and evaluated plugin distribution.
 
 **v0.4 limitations:** The interactive dashboard is a local HTML artifact, **not** a hosted service. JUnit import reads results produced elsewhere, **not** tests it runs. Fully automatic bug detection, browser testing, approved code execution and hosted dashboards remain future work. See [v0.4 release notes](docs/release-notes-v0.4.md).

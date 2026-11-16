@@ -86,7 +86,7 @@ class ExperienceTests(unittest.TestCase):
         init = dispatch({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
         self.assertEqual(init["result"]["serverInfo"]["name"], "mirrormap")
         listing = dispatch({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-        self.assertEqual(len(listing["result"]["tools"]), 3)
+        self.assertEqual(len(listing["result"]["tools"]), 5)
         with patch.dict(os.environ, {"MIRRORMAP_ALLOWED_ROOTS": ""}):
             denied = dispatch({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "mirrormap_audit", "arguments": {"repo": str(EXAMPLE)}}})
             self.assertTrue(denied["result"]["isError"])
