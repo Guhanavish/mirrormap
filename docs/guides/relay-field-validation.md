@@ -33,3 +33,19 @@ python -m unittest discover -s tests -v
 These test synthetic events/CLI subprocesses only. **Release gate:** publish no broad production compatibility claims until real-host trials of at least one cross-agent pair and an interruption pass with a documented environment.
 
 Sources: [Codex](https://learn.chatgpt.com/docs/hooks), [Claude](https://code.claude.com/docs/en/hooks), [Cursor](https://cursor.com/docs/hooks).
+
+## Check an observed Agent A → Agent B transfer
+
+After completing the real-host protocol above, and **after** Agent B records a milestone following adoption, run:
+
+```sh
+python -m projectmirror relay field-check --source OLD_SESSION_ID --target NEW_SESSION_ID
+```
+
+This command returns exit status **0** when all *recorded* checkpoint, lineage, milestone and workspace checks pass. Exit status **1** means at least one check failed; exit status **2** indicates invalid arguments, missing sessions or other input errors. In particular, it requires a source session note and a **new Agent B milestone after adoption**, so merely copying task metadata does not pass.
+
+**Not a host certification:** Hook events can be fabricated and user notes are not authenticated. The report always includes `host_runtime_authenticated: false`. A maintainer must separately observe the actual Codex/Claude/Cursor sessions and record their versions, hook trust state, interruption and resumed work before declaring any real-host pair tested.
+
+### Cursor reminder limitation
+
+Cursor `sessionStart` supports `additional_context`, but `beforeSubmitPrompt` does **not** support context injection, per [Cursor's hook contract](https://cursor.com/docs/hooks). MirrorMap continues recording prompt-event metadata where a session ID is available but deliberately returns an empty output from that prompt hook. Do **not** claim that Cursor receives automatic mid-session milestone reminders from `beforeSubmitPrompt`. The skill or an explicit `relay note` remains necessary to persist precise task steps.

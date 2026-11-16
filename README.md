@@ -71,6 +71,10 @@ Relay stores a **private, local SQLite event journal** and bounded Git file fing
 
 [**Relay setup, commands, privacy and limitations**](docs/guides/relay.md) · [**Agent skill Relay instructions**](references/relay.md)
 
+### Check an Agent A → Agent B handoff
+
+After a real handoff and a new Agent B milestone, run `python -m projectmirror relay field-check --source OLD_SESSION_ID --target NEW_SESSION_ID`. The check validates recorded history, state, lineage and post-handoff progress; it **cannot authenticate a real agent host**. See [the live-agent testing protocol](docs/guides/relay-field-validation.md). Cursor's `beforeSubmitPrompt` hook does not inject model context, so its recurring milestone prompts are not guaranteed.
+
 ## Why MirrorMap exists
 
 A repository can have a login page and still lack a working login flow. A test can exist without testing the acceptance criteria. And an AI agent can overlook unfinished work because the code itself is the only thing it inspected.

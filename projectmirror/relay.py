@@ -530,6 +530,56 @@ def adopt_session(source_sid: str, target_sid: str, *, source_stopped: bool = Fa
         conn.close()
 
 
+def field_check(source_sid: str, target_sid: str) -> dict:
+    """Check a recorded two-agent handoff; never claim to authenticate a real host.
+
+    A caller must run the real agents and attest to having observed their
+    behavior independently. Simulated hook payloads can satisfy these checks.
+    This command never invokes an agent, edits files or grants approvals.
+    """
+    if source_sid == target_sid:
+        raise AuditError("Source and target sessions must differ")
+    source = inspect(source_sid)
+    target = inspect(target_sid)
+    src_check = source["verification"]
+    dst_check = target["verification"]
+    conn = _connect()
+    try:
+        def observed(session_id: str) -> dict:
+            events = conn.execute("SELECT seq,kind FROM events WHERE session_id=? ORDER BY seq",
+                                  (session_id,)).fetchall()
+            types = {row["kind"] for row in events}
+            handoff_in_seq = max((row["seq"] for row in events if row["kind"] == "handoff-in"), default=None)
+            return {"native_session_start_recorded": "sessionstart" in types,
+                    "task_note_recorded": "agent-note" in types,
+                    "post_handoff_milestone_recorded": handoff_in_seq is not None and any(
+                        row["seq"] > handoff_in_seq and row["kind"] == "agent-note" for row in events)}
+        src_events, dst_events = observed(source_sid), observed(target_sid)
+    finally:
+        conn.close()
+    checks = {
+        "different_agents": source["agent"] != target["agent"],
+        "same_workspace": source["workspace"] == target["workspace"],
+        "source_session_start_recorded": src_events["native_session_start_recorded"],
+        "target_session_start_recorded": dst_events["native_session_start_recorded"],
+        "source_milestone_recorded": src_events["task_note_recorded"] and bool(source["goal"] and source["next_step"]),
+        "goal_preserved": bool(source["goal"]) and target["goal"] == source["goal"],
+        "next_step_preserved": bool(source["next_step"]) and target["next_step"] == source["next_step"],
+        "handoff_lineage": target["parent_session"] == source_sid and source["status"] == "resumed_elsewhere",
+        "post_handoff_milestone_recorded": dst_events["post_handoff_milestone_recorded"],
+        "journals_valid": src_check["journal_integrity"] == dst_check["journal_integrity"] == "valid",
+        "current_workspace_matches": src_check["workspace_matches_checkpoint"] and dst_check["workspace_matches_checkpoint"],
+        "no_pending_or_uncorrelated_operations": all(
+            not x["pending_tools"] and x["unpaired_tool_starts"] == 0 for x in (src_check, dst_check)),
+    }
+    return {"source_session": source_sid, "target_session": target_sid,
+            "source_agent": source["agent"], "target_agent": target["agent"],
+            "checks": checks, "passed": all(checks.values()),
+            "execution_authorized": False,
+            "host_runtime_authenticated": False,
+            "notice": "Checks recorded handoff consistency only. Independently observe real host behavior; synthetic hooks can satisfy these checks."}
+
+
 def _quote_command(parts: list[str]) -> str:
     if os.name == "nt":
         return subprocess.list2cmdline(parts)
@@ -653,6 +703,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--from", dest="source", required=True)
     p.add_argument("--into", dest="target", required=True)
     p.add_argument("--confirm-source-stopped", action="store_true")
+    p = cmds.add_parser("field-check", help="validate recorded two-agent transfer (not host authentication)")
+    p.add_argument("--source", required=True)
+    p.add_argument("--target", required=True)
     p = cmds.add_parser("hook", help="agent lifecycle hook receiver (local metadata only)")
     p.add_argument("--agent", required=True, choices=AGENTS)
     p.add_argument("--event", required=True)
@@ -678,7 +731,10 @@ def main(argv: list[str] | None = None) -> int:
                     sid = result["session_id"]
                     message = milestone_reminder(sid)
                     if args.agent == "cursor":
-                        output = {"additional_context": message} if message else {}
+                        # Cursor's beforeSubmitPrompt output supports prompt gating,
+                        # not additional_context injection. Only sessionStart may
+                        # contribute model context; still record prompt metadata.
+                        output = {"additional_context": message} if (is_start and message) else {}
                         if is_start:
                             output["env"] = {"MIRRORMAP_RELAY_NATIVE_SESSION_ID": event.get("session_id", "")}
                         _json(output)
@@ -704,6 +760,10 @@ def main(argv: list[str] | None = None) -> int:
             _json({"recorded": True, "session_id": args.session})
         elif args.command == "adopt":
             _json(adopt_session(args.source, args.target, source_stopped=args.confirm_source_stopped))
+        elif args.command == "field-check":
+            report = field_check(args.source, args.target)
+            _json(report)
+            return 0 if report["passed"] else 1
         elif args.command in {"install-hooks", "uninstall-hooks"}:
             _json(modify_hooks(args.agent, args.project, apply=args.apply,
                                remove=args.command == "uninstall-hooks"))
