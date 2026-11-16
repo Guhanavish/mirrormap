@@ -1,3 +1,10 @@
+## Unreleased — Relay continuity hardening and website
+
+- Add conditional user-prompt hook reminders without retaining the user's input.
+- Expand CLI-driven synthetic handoff tests and add live-host field validation instructions.
+- Update the hosted website content to include Relay v0.6 and Evidence Intelligence v0.5 development previews.
+- Keep v0.4 as the latest official release pending observed real-host handoff tests.
+
 ## [0.6.0b1] — MirrorMap Relay (development preview; no official GitHub Release)
 
 ### Added
