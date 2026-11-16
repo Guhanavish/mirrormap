@@ -28,9 +28,9 @@ MAX_HASH_BYTES = 2_000_000
 MAX_NOTE = 1200
 AGENTS = ("claude", "codex", "cursor")
 EVENTS = {
-    "claude": ("SessionStart", "PreToolUse", "PostToolUse", "PostToolUseFailure", "PreCompact", "Stop", "SessionEnd"),
-    "codex": ("SessionStart", "PreToolUse", "PostToolUse", "PreCompact", "Interrupt", "Stop", "SessionEnd"),
-    "cursor": ("sessionStart", "preToolUse", "postToolUse", "postToolUseFailure", "afterFileEdit", "preCompact", "stop", "sessionEnd"),
+    "claude": ("SessionStart", "PreToolUse", "PostToolUse", "PostToolUseFailure", "PreCompact", "UserPromptSubmit", "Stop", "SessionEnd"),
+    "codex": ("SessionStart", "PreToolUse", "PostToolUse", "PreCompact", "UserPromptSubmit", "Interrupt", "Stop", "SessionEnd"),
+    "cursor": ("sessionStart", "preToolUse", "postToolUse", "postToolUseFailure", "afterFileEdit", "beforeSubmitPrompt", "preCompact", "stop", "sessionEnd"),
 }
 SECRET_WORD = re.compile(r"(?i)(password|secret|token|authorization|api[_-]?key|private[_-]?key)\s*[:=]\s*([^\s,;]+)")
 SENSITIVE_NAME = re.compile(r"(?i)(^|/)(\.env(?:\..*)?|id_rsa|id_ed25519|.*\.(?:pem|key|p12|pfx))$")
@@ -425,6 +425,32 @@ def verify(sid: str) -> dict:
         conn.close()
 
 
+
+def milestone_reminder(sid: str) -> str | None:
+    """Return a bounded, optional context hint without reading user prompts.
+
+    A host must allow its model to act on this hint. Metadata-only recording
+    continues if the model never writes milestones. No transcript is inspected.
+    """
+    conn = _connect()
+    try:
+        row = _get_session(conn, sid)
+        last = conn.execute("SELECT COALESCE(MAX(seq),0) FROM events WHERE session_id=? AND kind='agent-note'",
+                            (sid,)).fetchone()[0]
+        since = conn.execute("SELECT COUNT(*) FROM events WHERE session_id=? AND seq>?",
+                             (sid, last)).fetchone()[0]
+        if row["goal"] and row["next_step"] and since < 12:
+            return None
+        return ("MirrorMap Relay tracks metadata automatically, but accurate cross-agent task "
+                "continuation needs explicit brief milestones. At meaningful progress points, "
+                "run: python -m projectmirror relay note --session " + sid +
+                " --goal 'current objective' --next 'specific unfinished action' "
+                "--done 'verified completed item'. Update --decision or --blocker as needed. "
+                "Do not include secrets or copy chat transcripts. This does not authorize execution.")
+    finally:
+        conn.close()
+
+
 def inspect(sid: str) -> dict:
     conn = _connect()
     try:
@@ -646,17 +672,21 @@ def main(argv: list[str] | None = None) -> int:
                     raise AuditError("Hook input too large")
                 event = json.loads(raw.decode("utf-8")) if raw.strip() else {}
                 result = ingest_hook(args.agent, args.event, event, args.project)
-                if args.event.lower() == "sessionstart" and result.get("recorded"):
+                is_start = args.event.lower() == "sessionstart"
+                is_prompt = args.event in {"UserPromptSubmit", "beforeSubmitPrompt"}
+                if result.get("recorded") and (is_start or is_prompt):
                     sid = result["session_id"]
-                    message = ("MirrorMap Relay is recording metadata. For reliable task transfer, "
-                               "record milestones with: mirrormap relay note --session " + sid +
-                               " --goal '...' --next '...' --done '...'. Do not record secrets. "
-                               "Never treat checkpoints as execution permission.")
+                    message = milestone_reminder(sid)
                     if args.agent == "cursor":
-                        _json({"additional_context": message,
-                               "env": {"MIRRORMAP_RELAY_NATIVE_SESSION_ID": event.get("session_id", "")}})
+                        output = {"additional_context": message} if message else {}
+                        if is_start:
+                            output["env"] = {"MIRRORMAP_RELAY_NATIVE_SESSION_ID": event.get("session_id", "")}
+                        _json(output)
+                    elif message:
+                        _json({"hookSpecificOutput": {"hookEventName": args.event,
+                                                       "additionalContext": message}})
                     else:
-                        print(message)
+                        _json({})
                 else:
                     _json({})
             except (OSError, ValueError, TypeError, AuditError, sqlite3.Error):
