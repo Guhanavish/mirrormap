@@ -237,6 +237,55 @@ class RelayTests(unittest.TestCase):
             self.assertTrue(result['result'].get('isError'))
             self.assertNotIn('Build player',result['result']['content'][0]['text'])
 
+
+    def test_user_prompt_hook_only_injects_reminder_not_raw_prompt(self):
+        sid = self.start('codex', 'prompt-sim')
+        private = 'Do not store this message SECRET_INTERNAL_123'
+        payload = json.dumps({'session_id':'prompt-sim', 'cwd':str(self.repo),
+                              'prompt':private})
+        def run():
+            return subprocess.run([sys.executable,'-m','projectmirror','relay','hook',
+                                   '--agent','codex','--event','UserPromptSubmit',
+                                   '--project',str(self.repo)],
+                                  input=payload,text=True,capture_output=True,
+                                  cwd=Path(__file__).resolve().parents[1],
+                                  env={**os.environ,'MIRRORMAP_RELAY_HOME':str(self.db)})
+        first=run()
+        self.assertEqual(first.returncode,0,first.stderr)
+        response=json.loads(first.stdout)
+        self.assertIn('relay note',response['hookSpecificOutput']['additionalContext'])
+        self.assertNotIn(private,(self.db/'sessions.sqlite3').read_bytes().decode('latin1'))
+        relay.record_note(sid,goal='Build safe example',next_step='Run unit tests')
+        self.assertEqual(json.loads(run().stdout),{})
+        self.assertFalse(relay.resume(sid)['execution_authorized'])
+
+    def test_cli_cross_agent_handoff_with_simulated_host_events(self):
+        base=Path(__file__).resolve().parents[1]
+        def call(*args,event=None):
+            result=subprocess.run([sys.executable,'-m','projectmirror','relay',*args],
+                                  input=json.dumps(event) if event is not None else None,
+                                  text=True,capture_output=True,cwd=base,
+                                  env={**os.environ,'MIRRORMAP_RELAY_HOME':str(self.db)})
+            self.assertEqual(result.returncode,0,result.stderr)
+            return json.loads(result.stdout)
+        call('hook','--agent','claude','--event','SessionStart','--project',str(self.repo),
+             event={'session_id':'old-synthetic-agent','cwd':str(self.repo)})
+        old=call('sessions','--workspace',str(self.repo))[0]['id']
+        call('note','--session',old,'--goal','Complete fixture',
+             '--next','Write regression test','--done','Established baseline')
+        call('hook','--agent','codex','--event','SessionStart','--project',str(self.repo),
+             event={'session_id':'new-synthetic-agent','cwd':str(self.repo)})
+        new=next(x['id'] for x in call('sessions','--workspace',str(self.repo))
+                 if x['agent']=='codex')
+        self.assertFalse(call('resume','--session',old)['execution_authorized'])
+        handoff=call('adopt','--from',old,'--into',new,'--confirm-source-stopped')
+        self.assertTrue(handoff['read_only_context_transferred'])
+        resumed=call('resume','--session',new)
+        self.assertEqual(resumed['next_step'],'Write regression test')
+        self.assertEqual(resumed['goal'],'Complete fixture')
+        self.assertTrue(resumed['ready_for_review'])
+        self.assertFalse(resumed['execution_authorized'])
+
     def test_cli_entrypoints_and_hook_output(self):
         from projectmirror.experience import main as experience_main
         from projectmirror.__main__ import cmd_main

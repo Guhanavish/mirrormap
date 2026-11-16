@@ -47,6 +47,9 @@ This requires a recent Node.js runtime for the installer (the Skills CLI's curre
 
 ## MirrorMap Relay — Agent Context Continuity
 
+**Continuity improvement:** Opt-in user-prompt hooks can now remind agents to write missing/aging task milestones without recording user prompts. The model still has to perform `relay note`; this is not guaranteed automatic semantic recovery. [Live agent validation protocol](docs/guides/relay-field-validation.md) documents the genuine-host tests required before a new production-ready release.
+
+
 **v0.6.0b1 development preview.** Relay tracks **agent session metadata automatically when the user explicitly enables native lifecycle hooks**, even if MirrorMap is never summoned during Agent A's work. Agent B can then invoke the skill, list recorded sessions, select one, verify its latest checkpoint, and receive a safe read-only resume brief.
 
 **Important:** A copied `SKILL.md` on its own cannot listen to agent lifecycle events. Install the Python package and configure/approve the native hooks *once per agent*, for the selected project:

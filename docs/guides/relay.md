@@ -20,6 +20,12 @@ Adoption requires a matching current workspace and verified journals with no unr
 
 A different computer/cloud agent **does not** share local sessions automatically. Secure cross-device synchronization, authenticating the owner, and restoring full worktrees are not implemented.
 
+## Better task milestone reminders
+
+The opt-in Codex/Claude `UserPromptSubmit` and Cursor `beforeSubmitPrompt` hooks now return a **conditional, privacy-preserving milestone reminder** when the goal or next step is missing, or enough events have passed since the last note. They do not store the user's prompt. The agent must still perform `relay note` for a high-fidelity handoff; reminders alone cannot recover hidden reasoning.
+
+See the [real-host field validation protocol](relay-field-validation.md). Synthetic tests are not proof of production compatibility.
+
 ## Install the recording hooks
 
 Run once inside the MirrorMap source checkout:
