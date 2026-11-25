@@ -1,3 +1,10 @@
+## Unreleased — persistent project state preview
+
+- Durable event checkpoints, explicit manual save, historical recovery and character-budgeted continuation context.
+- Opt-in redacted prompt and final-response excerpts, ancestor context, project memory, reviewed merge candidates and stage suggestions.
+- Explicit acknowledgment of interrupted operations, unique temporary configuration files, and digest-linked audit manifests and portable context review.
+- Preserve read-only authority, default metadata privacy, and legacy command compatibility; live agent certification remains pending.
+
 ## Unreleased — Relay continuity hardening and website
 
 - Fix Cursor `beforeSubmitPrompt` output to avoid unsupported context injection; preserve metadata-only event capture.

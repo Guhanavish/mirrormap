@@ -31,7 +31,7 @@ AGENTS = ("claude", "codex", "cursor")
 EVENTS = {
     "claude": ("SessionStart", "PreToolUse", "PostToolUse", "PostToolUseFailure", "PreCompact", "UserPromptSubmit", "Stop", "SessionEnd"),
     "codex": ("SessionStart", "PreToolUse", "PostToolUse", "PreCompact", "UserPromptSubmit", "Interrupt", "Stop", "SessionEnd"),
-    "cursor": ("sessionStart", "preToolUse", "postToolUse", "postToolUseFailure", "afterFileEdit", "beforeSubmitPrompt", "preCompact", "stop", "sessionEnd"),
+    "cursor": ("sessionStart", "preToolUse", "postToolUse", "postToolUseFailure", "afterFileEdit", "beforeSubmitPrompt", "afterAgentResponse", "preCompact", "stop", "sessionEnd"),
 }
 SECRET_WORD = re.compile(r"(?i)(password|secret|token|authorization|api[_-]?key|private[_-]?key)\s*[:=]\s*([^\s,;]+)")
 SENSITIVE_NAME = re.compile(r"(?i)(^|/)(\.env(?:\..*)?|id_rsa|id_ed25519|.*\.(?:pem|key|p12|pfx))$")
@@ -262,14 +262,22 @@ def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | Non
         raise AuditError("Unsupported agent event")
     if not isinstance(payload, dict):
         raise AuditError("Hook input must be a JSON object")
-    directory = payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
+    directory = payload.get("cwd")
+    if agent == "cursor" and not directory:
+        roots = payload.get("workspace_roots")
+        if isinstance(roots, list) and len(roots) == 1 and isinstance(roots[0], str):
+            directory = roots[0]
+        elif isinstance(roots, list) and len(roots) > 1:
+            return {"recorded": False, "reason": "ambiguous-multi-root-workspace"}
+    directory = directory or os.environ.get("CLAUDE_PROJECT_DIR") or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
     workspace = _workspace(directory)
     store = Path(os.environ.get("MIRRORMAP_RELAY_HOME", "~/.mirrormap/relay")).expanduser().resolve()
     if store == workspace or workspace in store.parents:
         raise AuditError("Relay store must stay OUTSIDE the audited project")
     if project is not None and workspace != _workspace(project):
         return {"recorded": False, "reason": "outside-approved-project"}
-    native = (payload.get("session_id") or payload.get("conversation_id")
+    native = ((payload.get("conversation_id") if agent == "cursor" else None) or
+              payload.get("session_id") or payload.get("conversation_id")
               or (os.getenv("MIRRORMAP_RELAY_NATIVE_SESSION_ID") if agent == "cursor" else None))
     # Several Cursor hook types lack a session_id in their documented payload.
     # Failing closed is safer than associating concurrent sessions by guessing.
@@ -359,6 +367,8 @@ def record_note(sid: str, *, title: str | None = None, goal: str | None = None,
         with conn:
             conn.execute("BEGIN IMMEDIATE")
             row = _get_session(conn, sid)
+            if row["status"] == "resumed_elsewhere":
+                raise AuditError("Record milestones in the continuing session")
             updates = {"title": _text(title) if title is not None else row["title"],
                        "goal": _text(goal) if goal is not None else row["goal"],
                        "next_step": _text(next_step) if next_step is not None else row["next_step"]}
@@ -419,7 +429,11 @@ def verify(sid: str) -> dict:
             chain = "valid"
         saved = json.loads(row["snapshot"])
         current = workspace_snapshot(row["workspace"])
-        workspace_match = saved == current and bool(current.get("git_available")) and not current.get("truncated")
+        complete = bool(current.get("git_available")) and not current.get("truncated") and all(
+            entry.get("sha256") is not None or ("D" in entry.get("status", "") and not entry.get("type")
+                                              and entry.get("size") is None)
+            for entry in current.get("changed", []))
+        workspace_match = saved == current and complete
         pending = conn.execute("SELECT tool_name,started_at FROM pending_tools WHERE session_id=? ORDER BY started_at",
                                (sid,)).fetchall()
         uncorrelated = conn.execute(
@@ -428,7 +442,7 @@ def verify(sid: str) -> dict:
             "AND kind='operations-reconciled')", (sid, sid)).fetchone()[0]
         return {"session_id": sid, "journal_integrity": chain,
                 "workspace_matches_checkpoint": workspace_match,
-                "workspace_fingerprint_complete": bool(current.get("git_available")) and not current.get("truncated"),
+                "workspace_fingerprint_complete": complete,
                 "pending_tools": [dict(r) for r in pending],
                 "unpaired_tool_starts": uncorrelated,
                 "safe_to_auto_execute": False,
@@ -773,7 +787,7 @@ def main(argv: list[str] | None = None) -> int:
                         # contribute model context; still record prompt metadata.
                         output = {"additional_context": message} if (is_start and message) else {}
                         if is_start:
-                            output["env"] = {"MIRRORMAP_RELAY_NATIVE_SESSION_ID": event.get("session_id", "")}
+                            output["env"] = {"MIRRORMAP_RELAY_NATIVE_SESSION_ID": event.get("conversation_id") or event.get("session_id", "")}
                         _json(output)
                     elif message:
                         _json({"hookSpecificOutput": {"hookEventName": args.event,

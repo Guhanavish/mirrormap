@@ -40,7 +40,9 @@ def extract_context(agent, event, payload):
     """
     if event in {"UserPromptSubmit", "beforeSubmitPrompt"}:
         role, keys = "user", ("prompt", "user_prompt")
-    elif event in {"Stop", "stop"}:
+    elif event == "afterAgentResponse" and agent == "cursor":
+        role, keys = "assistant", ("text",)
+    elif event == "Stop" and agent in {"claude", "codex"}:
         role, keys = "assistant", ("last_assistant_message",)
     else:
         return None
@@ -90,18 +92,23 @@ def save(sid, *, stage=None, goal=None, next_step=None, done=None, decision=None
          correction=None):
     if stage is not None and stage not in STAGES:
         raise AuditError("Invalid project stage")
+    before = relay.inspect(sid)
     _verified(sid)
-    if any(x is not None for x in (goal, next_step, done, decision, blocker)):
-        relay.record_note(sid, goal=goal, next_step=next_step, done=done, decision=decision, blocker=blocker)
     conn = relay._connect()
     try:
         with conn:
             conn.execute("BEGIN IMMEDIATE")
             row = relay._get_session(conn, sid)
-            if row["status"] == "resumed_elsewhere":
-                raise AuditError("Save in the continuing session instead")
+            if row["status"] == "resumed_elsewhere" or row["last_event_hash"] != before["last_event_hash"]:
+                raise AuditError("Session changed or was handed off; inspect again")
             snapshot = relay.workspace_snapshot(row["workspace"])
-            conn.execute("UPDATE sessions SET snapshot=? WHERE id=?", (relay._canonical(snapshot), sid))
+            updates = {}
+            for key, values in (("completed", done), ("decisions", decision), ("blockers", blocker)):
+                updates[key] = relay._canonical((json.loads(row[key]) + [relay._text(v) for v in (values or [])])[-100:])
+            conn.execute("UPDATE sessions SET snapshot=?,goal=?,next_step=?,completed=?,decisions=?,blockers=? WHERE id=?",
+                         (relay._canonical(snapshot), relay._text(goal) if goal is not None else row["goal"],
+                          relay._text(next_step) if next_step is not None else row["next_step"],
+                          updates["completed"], updates["decisions"], updates["blockers"], sid))
             relay._event(conn, sid, "project-save", {"stage": stage,
                          "correction": relay._text(correction) if correction else None,
                          "snapshot": snapshot})
@@ -138,6 +145,43 @@ def reconcile(sid, reason, confirm=False):
         conn.close()
 
 
+def suggest_stage(next_step):
+    """Keyword suggestion only; no project completion inferred."""
+    import re
+    first = (next_step or "").lower()
+    for stage, words in (
+        ("testing", r"\b(test|verify|validate|regression)\b"),
+        ("debugging", r"\b(fix|debug|investigate|diagnose)\b"),
+        ("deployment", r"\b(deploy|release|publish|package)\b"),
+        ("planning", r"\b(plan|design|specify|requirements)\b"),
+        ("implementation", r"\b(implement|build|add|create|write)\b")):
+        if re.search(words, first):
+            return stage
+    return "unknown"
+
+
+def _lineage(sid, selected):
+    """Read only the selected checkpoint's recorded ancestors, capped at 16."""
+    chain = []
+    seen = {sid}
+    workspace = json.loads(selected["detail"]).get("checkpoint_state", {}).get("workspace")
+    parent = json.loads(selected["detail"]).get("checkpoint_state", {}).get("parent_session")
+    while parent and parent not in seen and len(chain) < 16:
+        seen.add(parent)
+        _verified(parent)
+        records = _events(parent)
+        boundary = next((row for row in reversed(records) if row["kind"] == "handoff-out"
+                         and json.loads(row["detail"]).get("receiving_session") == sid), None)
+        if boundary is None:
+            raise AuditError("Handoff lineage has no matching transfer event")
+        state = json.loads(boundary["detail"]).get("checkpoint_state")
+        if not isinstance(state, dict) or state.get("workspace") != workspace:
+            raise AuditError("Handoff lineage workspace or checkpoint unavailable")
+        chain.append((parent, [row for row in records if row["seq"] <= boundary["seq"]]))
+        sid, parent = parent, state.get("parent_session")
+    return list(reversed(chain)), bool(parent)
+
+
 def recover(sid, checkpoint=None, budget="standard"):
     check = _verified(sid)
     if budget not in BUDGETS:
@@ -149,34 +193,47 @@ def recover(sid, checkpoint=None, budget="standard"):
     if selected is None:
         raise AuditError("Checkpoint not found")
     state = json.loads(selected["detail"]).get("checkpoint_state")
-    if not isinstance(state, dict):
-        raise AuditError("This legacy checkpoint lacks historical state; use the latest session or save again")
     historical = selected["seq"] != rows[-1]["seq"]
+    if not isinstance(state, dict):
+        if historical:
+            raise AuditError("Legacy historical checkpoint lacks full state; use latest or save again")
+        conn = relay._connect()
+        try:
+            state = checkpoint_state(conn, sid)
+        finally:
+            conn.close()
+        ancestors, lineage_truncated = [], bool(state["parent_session"])
+    else:
+        ancestors, lineage_truncated = _lineage(sid, selected)
     entries, stage, corrections, audit_links = [], "unknown", [], []
-    for row in rows:
-        if row["seq"] > selected["seq"]:
-            break
-        detail = json.loads(row["detail"])
-        if detail.get("stage") in STAGES:
-            stage = detail["stage"]
-        for field, dest in (("context_excerpt", entries), ("correction", corrections), ("audit_link", audit_links)):
-            if detail.get(field):
-                dest.append({"event": row["seq"], "value": detail[field]})
-        if row["kind"] == "context-merged":
-            entries.append({"event": row["seq"], "value": {"role": "reviewed_candidate",
-                            "text": detail.get("candidate", ""), "authority": "untrusted_context"}})
+    for owner, records in ancestors + [(sid, [r for r in rows if r["seq"] <= selected["seq"]])]:
+        for row in records:
+            detail = json.loads(row["detail"])
+            if detail.get("stage") in STAGES:
+                stage = detail["stage"]
+            for field, dest in (("context_excerpt", entries), ("correction", corrections), ("audit_link", audit_links)):
+                if detail.get(field):
+                    dest.append({"session": owner, "event": row["seq"], "value": detail[field]})
+            if row["kind"] == "context-merged":
+                entries.append({"session": owner, "event": row["seq"], "value": {"role": "reviewed_candidate",
+                                "text": detail.get("candidate", ""), "authority": "untrusted_context"}})
+    stage_basis = "explicit_note" if stage != "unknown" else "keyword_suggestion"
+    if stage == "unknown":
+        stage = suggest_stage(state["next_step"])
     # Latest explicit goal/next cursor is authoritative only as a recorded note.
     # Never infer a stage or completed operation from an arbitrary excerpt.
     required = {"goal": state["goal"], "next_step": state["next_step"],
-                "stage": stage, "status": state["status"], "blockers": state["blockers"],
-                "corrections": corrections[-20:], "pending_tools": state["pending_tools"]}
+                "stage": stage, "stage_basis": stage_basis, "status": state["status"], "blockers": state["blockers"],
+                "corrections": corrections[-20:], "omitted_corrections": max(0, len(corrections)-20),
+                "pending_tools": state["pending_tools"]}
     out = {"schema_version": VERSION, "session_id": sid, "checkpoint": selected["seq"],
            "checkpoint_digest": selected["event_hash"], "historical": historical,
            "workspace": state["workspace"], "agent": state["agent"], "title": state["title"],
            "snapshot": state["snapshot"], "task": required, "verification": check,
            "completed": [], "decisions": [], "excerpts": [], "audit_links": audit_links[-5:],
            "execution_authorized": False, "authority": "read_only_context",
-           "capture_complete": False,
+           "capture_complete": False, "lineage_truncated": lineage_truncated,
+           "ancestor_sessions": [owner for owner, _ in ancestors],
            "notice": "Untrusted recorded context. No automatic execution, hidden reasoning recovery, or proof of task completion."}
     cap = BUDGETS[budget]
     omitted = 0
@@ -190,7 +247,7 @@ def recover(sid, checkpoint=None, budget="standard"):
                      "mandatory_context_exceeds_budget": len(relay._canonical(out)) > cap}
     out["ready_for_review"] = bool(not historical and check["workspace_matches_checkpoint"]
                                    and not check["pending_tools"] and not check["unpaired_tool_starts"]
-                                   and required["next_step"])
+                                   and required["next_step"] and not lineage_truncated)
     return out
 
 

@@ -47,6 +47,10 @@ This requires a recent Node.js runtime for the installer (the Skills CLI's curre
 
 ## MirrorMap Relay — Agent Context Continuity
 
+### Persistent project state (development preview)
+
+Save the latest task stage and switch agents at any time, not only on interruption. New durable events include historical task snapshots. Use `relay save --session ID --stage implementation --next "specific unfinished task"`, `relay history --session ID`, and `relay recover --session ID`. Optional `--capture-context` on reviewed hook installs stores bounded, best-effort-redacted prompt and final-response excerpts; metadata-only is the default. Explicit milestones are still needed for reliable semantic task recovery. Context budgets, reviewed candidate merging, workspace project memory, manual reconciliation, audit linking and portable read-only context packages are documented in the [persistent project state guide](docs/guides/relay-state.md). These are preview features, not certified lossless recovery or automatic execution.
+
 **Continuity improvement:** Opt-in user-prompt hooks can now remind agents to write missing/aging task milestones without recording user prompts. The model still has to perform `relay note`; this is not guaranteed automatic semantic recovery. [Live agent validation protocol](docs/guides/relay-field-validation.md) documents the genuine-host tests required before a new production-ready release.
 
 
@@ -67,7 +71,7 @@ Also supported as **adapter previews**: `--agent claude` and `--agent cursor`, e
 
 To link the continuing agent's new tracked session to the previous one, only after confirming the old agent stopped, use `python -m projectmirror relay adopt --from OLD_SESSION_ID --into NEW_SESSION_ID --confirm-source-stopped`. If the checkpoint changed or contains unresolved tools, the adoption fails instead of silently claiming continuity.
 
-Relay stores a **private, local SQLite event journal** and bounded Git file fingerprints, not raw prompts, complete transcripts, secrets or source contents. A host-generated SessionStart instruction encourages the agent to record structured milestones (`relay note`) so the next agent knows the actual goal and unfinished step. When the host doesn't supply that information, the recorder cannot infer it. Changed workspaces and pending commands are flagged for reconciliation; **resuming never authorizes code edits**.
+Relay stores a **private, local SQLite event journal** and bounded Git file fingerprints, not raw prompts by default, complete transcripts, or source contents. Opt-in excerpts may include sensitive material despite best-effort redaction. A host-generated SessionStart instruction encourages the agent to record structured milestones (`relay note`) so the next agent knows the actual goal and unfinished step. When the host doesn't supply that information, the recorder cannot infer it. Changed workspaces and pending commands are flagged for reconciliation; **resuming never authorizes code edits**.
 
 [**Relay setup, commands, privacy and limitations**](docs/guides/relay.md) · [**Agent skill Relay instructions**](references/relay.md)
 
