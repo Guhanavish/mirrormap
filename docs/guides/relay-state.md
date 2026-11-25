@@ -12,7 +12,7 @@ python -m projectmirror relay install-hooks --agent claude --project /absolute/p
 
 Apply with `--apply` only after reviewing the privacy impact. Repeat for the receiving host if desired. Reinstall without `--capture-context` to disable future excerpt collection. This does not erase old recordings. The capture flag can store sensitive content; redaction is best-effort, not comprehensive. Do not enable on secret-bearing sessions. No transcript files, hidden thoughts, arbitrary tool inputs or outputs are collected. Supported prompt and final-message fields depend on the host version; Cursor uses `afterAgentResponse`. The adapters are not yet live-certified.
 
-Work normally. Explicit goal, decisions and task cursor still require a note or save from the user or agent. On a deliberate switch:
+Work normally. Explicit goal, decisions and task cursor still require a note or save from the user or agent. If an opted-in excerpt contains a labeled "Next:" or "Remaining task:", recovery exposes the most recent matching text as an **unreviewed candidate**. It never becomes a verified next step automatically. The session catalog shows the latest checkpoint ID and stage note or keyword suggestion. The existing resume CLI/MCP brief includes compact persistent context when the journal validates. On a deliberate switch:
 
 ```sh
 mirrormap relay sessions

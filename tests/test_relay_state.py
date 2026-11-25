@@ -164,6 +164,34 @@ class StateTests(unittest.TestCase):
         self.assertEqual(config.read_text(), original)
         self.assertEqual(list(self.root.glob("hooks.json.mirrormap-*.tmp")), [])
 
+    def test_last_response_candidate_without_explicit_note(self):
+        sid = self.start()
+        relay.ingest_hook("claude", "Stop", {"cwd": str(self.repo), "session_id": "one",
+                          "last_assistant_message": "A" * 1800 + "\nNext: Verify independent output routing"},
+                          self.repo, capture_context=True)
+        recovered = state.recover(sid)
+        self.assertFalse(recovered["ready_for_review"])
+        self.assertEqual(recovered["task"]["next_action_candidate"]["text"], "Verify independent output routing")
+        self.assertEqual(recovered["task"]["stage"], "testing")
+        self.assertEqual(relay.resume(sid)["project_state"]["task"]["next_action_candidate"]["text"],
+                         "Verify independent output routing")
+        self.assertFalse(relay.resume(sid)["execution_authorized"])
+
+    def test_catalog_and_audit_link(self):
+        from projectmirror.experience import audit_project
+        sid = self.start()
+        state.save(sid, stage="testing", next_step="Verify seek")
+        listed = relay.list_sessions(self.repo)[0]
+        self.assertEqual(listed["stage"], "testing")
+        self.assertIsInstance(listed["latest_checkpoint"], int)
+        out = self.root / "audit"
+        audit_project(self.repo, out=out)
+        linked = state.link_audit(sid, out)
+        self.assertFalse(linked["execution_authorized"])
+        recovered = state.recover(sid)
+        self.assertEqual(recovered["audit_links"][-1]["value"]["digest"], linked["digest"])
+        self.assertFalse(recovered["audit_links"][-1]["value"]["artifacts_rechecked_at_resume"])
+
     def test_cli_recover(self):
         sid = self.start()
         state.save(sid, goal="Player", next_step="Write tests")

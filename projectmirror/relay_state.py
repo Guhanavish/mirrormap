@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
 from . import relay
@@ -49,8 +50,18 @@ def extract_context(agent, event, payload):
     for key in keys:
         value = payload.get(key)
         if isinstance(value, str) and value.strip():
-            return {"role": role, "text": relay._text(value), "host": agent, "field": key,
-                    "truncated": len(value) > relay.MAX_NOTE,
+            # Keep both beginning and ending so a final "Next:" isn't lost on a long reply.
+            cleaned = relay.SECRET_WORD.sub(lambda m: m.group(1) + "=[REDACTED]", value)
+            cleaned = re.sub(r"(?is)-----BEGIN [^-]*PRIVATE KEY-----.*?(?:-----END [^-]*PRIVATE KEY-----|$)",
+                             "[REDACTED PRIVATE KEY]", cleaned)
+            cleaned = re.sub(r"\b(?:sk-[A-Za-z0-9_-]{12,}|gh[pousr]_[A-Za-z0-9]{12,})\b",
+                             "[REDACTED TOKEN]", cleaned)
+            truncated = len(cleaned) > relay.MAX_NOTE
+            marker = "\n[... omitted ...]\n"
+            half = (relay.MAX_NOTE - len(marker)) // 2
+            excerpt = cleaned[:half] + marker + cleaned[-half:] if truncated else cleaned
+            return {"role": role, "text": excerpt, "host": agent, "field": key,
+                    "truncated": truncated,
                     "authority": "untrusted_excerpt", "provenance": "opt_in_host_event"}
     return None
 
@@ -74,11 +85,14 @@ def _verified(sid):
 
 
 def history(sid, limit=30):
-    _verified(sid)
+    check = _verified(sid)
     if not 1 <= limit <= 100:
         raise AuditError("History limit must be from 1 to 100")
     records = []
-    for row in _events(sid):
+    rows = _events(sid)
+    if not rows or rows[-1]["event_hash"] != check["verified_event_hash"]:
+        raise AuditError("Session changed during validation; retry")
+    for row in rows:
         detail = json.loads(row["detail"])
         state = detail.get("checkpoint_state")
         records.append({"checkpoint": row["seq"], "kind": row["kind"], "created_at": row["created_at"],
@@ -168,15 +182,21 @@ def _lineage(sid, selected):
     parent = json.loads(selected["detail"]).get("checkpoint_state", {}).get("parent_session")
     while parent and parent not in seen and len(chain) < 16:
         seen.add(parent)
-        _verified(parent)
+        checked = _verified(parent)
         records = _events(parent)
+        if not records or records[-1]["event_hash"] != checked["verified_event_hash"]:
+            raise AuditError("Ancestor changed during validation; retry")
         boundary = next((row for row in reversed(records) if row["kind"] == "handoff-out"
                          and json.loads(row["detail"]).get("receiving_session") == sid), None)
         if boundary is None:
             raise AuditError("Handoff lineage has no matching transfer event")
         state = json.loads(boundary["detail"]).get("checkpoint_state")
-        if not isinstance(state, dict) or state.get("workspace") != workspace:
-            raise AuditError("Handoff lineage workspace or checkpoint unavailable")
+        if not isinstance(state, dict):
+            # Pre-upgrade transfer: latest notes remain readable, but historical
+            # context cannot be invented. Expose the incomplete ancestor chain.
+            break
+        if state.get("workspace") != workspace:
+            raise AuditError("Handoff lineage workspace mismatch")
         chain.append((parent, [row for row in records if row["seq"] <= boundary["seq"]]))
         sid, parent = parent, state.get("parent_session")
     return list(reversed(chain)), bool(parent)
@@ -189,6 +209,8 @@ def recover(sid, checkpoint=None, budget="standard"):
     rows = _events(sid)
     if not rows:
         raise AuditError("No durable checkpoints")
+    if rows[-1]["event_hash"] != check["verified_event_hash"]:
+        raise AuditError("Session changed during validation; retry")
     selected = rows[-1] if checkpoint is None else next((r for r in rows if r["seq"] == checkpoint), None)
     if selected is None:
         raise AuditError("Checkpoint not found")
@@ -217,15 +239,32 @@ def recover(sid, checkpoint=None, budget="standard"):
             if row["kind"] == "context-merged":
                 entries.append({"session": owner, "event": row["seq"], "value": {"role": "reviewed_candidate",
                                 "text": detail.get("candidate", ""), "authority": "untrusted_context"}})
+    # Extract only explicitly labeled next actions from public-message excerpts.
+    # These are not trusted task notes; never auto-promote them or run them.
+    candidates = []
+    for entry in entries:
+        value = entry["value"]
+        if value.get("role") not in {"assistant", "user"}:
+            continue
+        for match in re.finditer(r"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?(?:next(?:\s+step|\s+action)?|remaining(?:\s+task)?|unfinished(?:\s+task)?)\s*:\s*(?:\*\*)?\s*([^\n]{1,500})", value.get("text", "")):
+            candidates.append({"text": match.group(1).strip(), "session": entry["session"],
+                               "event": entry["event"], "role": value["role"],
+                               "authority": "unreviewed_candidate"})
+    candidate = candidates[-1] if candidates else None
     stage_basis = "explicit_note" if stage != "unknown" else "keyword_suggestion"
     if stage == "unknown":
-        stage = suggest_stage(state["next_step"])
+        stage = suggest_stage(state["next_step"] or (candidate or {}).get("text", ""))
     # Latest explicit goal/next cursor is authoritative only as a recorded note.
     # Never infer a stage or completed operation from an arbitrary excerpt.
     required = {"goal": state["goal"], "next_step": state["next_step"],
                 "stage": stage, "stage_basis": stage_basis, "status": state["status"], "blockers": state["blockers"],
                 "corrections": corrections[-20:], "omitted_corrections": max(0, len(corrections)-20),
+                "next_action_candidate": candidate,
                 "pending_tools": state["pending_tools"]}
+    for link in audit_links:
+        value = link["value"]
+        value["revision_matches_selected_checkpoint"] = bool(value.get("project_revision")) and value["project_revision"] == state["snapshot"].get("head")
+        value["artifacts_rechecked_at_resume"] = False
     out = {"schema_version": VERSION, "session_id": sid, "checkpoint": selected["seq"],
            "checkpoint_digest": selected["event_hash"], "historical": historical,
            "workspace": state["workspace"], "agent": state["agent"], "title": state["title"],
@@ -233,6 +272,7 @@ def recover(sid, checkpoint=None, budget="standard"):
            "completed": [], "decisions": [], "excerpts": [], "audit_links": audit_links[-5:],
            "execution_authorized": False, "authority": "read_only_context",
            "capture_complete": False, "lineage_truncated": lineage_truncated,
+           "capture_requires_review": True,
            "ancestor_sessions": [owner for owner, _ in ancestors],
            "notice": "Untrusted recorded context. No automatic execution, hidden reasoning recovery, or proof of task completion."}
     cap = BUDGETS[budget]

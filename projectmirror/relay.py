@@ -345,7 +345,26 @@ def list_sessions(workspace: str | Path | None = None, limit: int = 30) -> list[
         rows = conn.execute("SELECT id,agent,workspace,title,status,goal,next_step,updated_at "
                             "FROM sessions" + where + " ORDER BY updated_at DESC,id DESC LIMIT ?",
                             (*params, limit)).fetchall()
-        return [dict(row) for row in rows]
+        from .relay_state import suggest_stage
+        result = []
+        for row in rows:
+            entry = dict(row)
+            latest = conn.execute("SELECT seq FROM events WHERE session_id=? ORDER BY seq DESC LIMIT 1",
+                                  (row["id"],)).fetchone()
+            entry["latest_checkpoint"] = latest["seq"] if latest else None
+            entry["stage"] = suggest_stage(row["next_step"])
+            entry["stage_basis"] = "keyword_suggestion"
+            for saved in conn.execute("SELECT detail FROM events WHERE session_id=? AND kind='project-save' ORDER BY seq DESC",
+                                      (row["id"],)):
+                try:
+                    stage = json.loads(saved["detail"]).get("stage")
+                except (ValueError, AttributeError):
+                    continue
+                if stage and stage != "unknown":
+                    entry["stage"], entry["stage_basis"] = stage, "explicit_note"
+                    break
+            result.append(entry)
+        return result
     finally:
         conn.close()
 
@@ -405,6 +424,7 @@ def verify(sid: str) -> dict:
     """Verify local chain and workspace state, not author identity or task completion."""
     conn = _connect()
     try:
+        conn.execute("BEGIN")
         row = _get_session(conn, sid)
         events = conn.execute("SELECT session_id,kind,created_at,detail,previous_hash,event_hash "
                               "FROM events WHERE session_id=? ORDER BY seq", (sid,)).fetchall()
@@ -441,6 +461,7 @@ def verify(sid: str) -> dict:
             "AND seq > (SELECT COALESCE(MAX(seq),0) FROM events WHERE session_id=? "
             "AND kind='operations-reconciled')", (sid, sid)).fetchone()[0]
         return {"session_id": sid, "journal_integrity": chain,
+                "verified_event_hash": previous if chain == "valid" else None,
                 "workspace_matches_checkpoint": workspace_match,
                 "workspace_fingerprint_complete": complete,
                 "pending_tools": [dict(r) for r in pending],
@@ -505,7 +526,7 @@ def resume(sid: str) -> dict:
         notes.insert(0, "STOP: Some operations may have been interrupted; inspect side effects before retrying.")
     if not item["next_step"]:
         notes.insert(0, "The agent did not record a precise next step; ask for clarification or reconstruct carefully.")
-    return {"session_id": sid, "title": item["title"], "agent": item["agent"],
+    result = {"session_id": sid, "title": item["title"], "agent": item["agent"],
             "parent_session": item["parent_session"],
             "workspace": item["workspace"], "goal": item["goal"],
             "completed": item["completed"], "decisions": item["decisions"],
@@ -513,6 +534,15 @@ def resume(sid: str) -> dict:
             "verification": checks, "ready_for_review": ready and not unresolved and bool(item["next_step"]),
             "resume_instructions": notes,
             "authority": "read_only_context", "execution_authorized": False}
+    if checks["journal_integrity"] == "valid":
+        from .relay_state import recover
+        try:
+            result["project_state"] = recover(sid, budget="compact")
+            result["ready_for_review"] = result["ready_for_review"] and result["project_state"]["ready_for_review"]
+        except AuditError as exc:
+            result["ready_for_review"] = False
+            notes.append("Persistent context unavailable: " + str(exc))
+    return result
 
 
 def adopt_session(source_sid: str, target_sid: str, *, source_stopped: bool = False) -> dict:
@@ -532,6 +562,9 @@ def adopt_session(source_sid: str, target_sid: str, *, source_stopped: bool = Fa
             conn.execute("BEGIN IMMEDIATE")
             src = _get_session(conn, source_sid)
             dst = _get_session(conn, target_sid)
+            if (src["last_event_hash"] != before["verified_event_hash"] or
+                    dst["last_event_hash"] != after["verified_event_hash"]):
+                raise AuditError("Session changed during validation; inspect both sessions again")
             if src["workspace"] != dst["workspace"] or src["agent"] == dst["agent"]:
                 raise AuditError("Adoption requires two different agents sharing the same workspace")
             if dst["parent_session"] is not None or src["status"] == "resumed_elsewhere":
