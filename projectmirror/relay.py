@@ -15,6 +15,7 @@ import shlex
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -218,7 +219,11 @@ def _event(conn: sqlite3.Connection, sid: str, kind: str, detail: dict) -> None:
         raise AuditError("Unknown Relay session")
     stamp = int(time.time())
     previous = row["last_event_hash"]
-    detail = {**detail, "state_digest": _state_digest(conn, sid)}
+    # Persist a full, bounded task-state checkpoint at each durable event.
+    # Older events without checkpoint_state remain valid and readable.
+    from .relay_state import checkpoint_state
+    detail = {**detail, "checkpoint_state": checkpoint_state(conn, sid),
+              "state_digest": _state_digest(conn, sid)}
     payload = {"session_id": sid, "kind": kind, "created_at": stamp,
                "detail": detail, "previous_hash": previous}
     signature = _hash(payload)
@@ -251,7 +256,7 @@ def _create(conn: sqlite3.Connection, agent: str, native: str, workspace: Path) 
     return sid
 
 
-def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | None = None) -> dict:
+def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | None = None, *, capture_context: bool = False) -> dict:
     """Handle host hook metadata. Does not store the original payload."""
     if agent not in EVENTS or event not in EVENTS[agent]:
         raise AuditError("Unsupported agent event")
@@ -280,6 +285,11 @@ def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | Non
                 return {"recorded": False, "reason": "session-handed-off", "session_id": sid}
             kind = event.lower()
             details: dict[str, Any] = {"event": event}
+            if capture_context:
+                from .relay_state import extract_context
+                captured = extract_context(agent, event, payload)
+                if captured:
+                    details["context_excerpt"] = captured
             if event in {"PreToolUse", "preToolUse"}:
                 tool = payload.get("tool_name") or payload.get("tool") or "unspecified"
                 details["tool"] = str(tool)[:96]
@@ -412,8 +422,10 @@ def verify(sid: str) -> dict:
         workspace_match = saved == current and bool(current.get("git_available")) and not current.get("truncated")
         pending = conn.execute("SELECT tool_name,started_at FROM pending_tools WHERE session_id=? ORDER BY started_at",
                                (sid,)).fetchall()
-        uncorrelated = conn.execute("SELECT COUNT(*) FROM events WHERE session_id=? AND kind='uncorrelated-tool-start'",
-                                    (sid,)).fetchone()[0]
+        uncorrelated = conn.execute(
+            "SELECT COUNT(*) FROM events WHERE session_id=? AND kind='uncorrelated-tool-start' "
+            "AND seq > (SELECT COALESCE(MAX(seq),0) FROM events WHERE session_id=? "
+            "AND kind='operations-reconciled')", (sid, sid)).fetchone()[0]
         return {"session_id": sid, "journal_integrity": chain,
                 "workspace_matches_checkpoint": workspace_match,
                 "workspace_fingerprint_complete": bool(current.get("git_available")) and not current.get("truncated"),
@@ -594,7 +606,7 @@ def _config_path(agent: str) -> Path:
 
 
 def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
-                       config_path: Path | None = None) -> dict:
+                       config_path: Path | None = None, capture_context: bool = False) -> dict:
     """Return preview for additive user-level hook config; never mutate without apply."""
     if agent not in AGENTS:
         raise AuditError("Agent must be claude, codex, or cursor")
@@ -616,8 +628,11 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
     # Hook scripts import the installed distribution in isolated Python mode to
     # avoid import-shadowing by an unrelated repository's projectmirror.py.
     for event in EVENTS[agent]:
-        command = _quote_command([sys.executable, "-I", "-m", "projectmirror", "relay", "hook",
-                                  "--agent", agent, "--event", event, "--project", str(root)])
+        parts = [sys.executable, "-I", "-m", "projectmirror", "relay", "hook",
+                 "--agent", agent, "--event", event, "--project", str(root)]
+        old_command = _quote_command(parts)
+        capture_command = _quote_command(parts + ["--capture-context"])
+        command = capture_command if capture_context else old_command
         if agent == "cursor":
             record = {"command": command}
         else:
@@ -627,13 +642,25 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
             raise AuditError("Existing hook event configuration must be an array")
         marker = f"relay hook --agent {agent} --event {event} --project"
         # Exactly match generated commands, preserve third-party hooks and others.
-        match = [item for item in existing if _contains_command(item, command)]
-        if remove:
-            hooks[event] = [item for item in existing if not _contains_command(item, command)]
-            if not hooks[event]:
-                del hooks[event]
-        elif not match:
-            hooks[event].append(record)
+        # Switch recording modes without duplicating our own hooks.
+        # Preserve unrelated commands, including those in grouped hooks.
+        own = {old_command, capture_command}
+        cleaned = []
+        for item in existing:
+            if isinstance(item, dict) and item.get("command") in own:
+                continue
+            if isinstance(item, dict) and isinstance(item.get("hooks"), list):
+                children = [c for c in item["hooks"] if not
+                            (isinstance(c, dict) and c.get("command") in own)]
+                if not children and item["hooks"]:
+                    continue
+                item = {**item, "hooks": children}
+            cleaned.append(item)
+        if not remove:
+            cleaned.append(record)
+        hooks[event] = cleaned
+        if remove and not cleaned:
+            del hooks[event]
         commands.append(command)
     if remove and not hooks:
         config.pop("hooks", None)
@@ -653,25 +680,29 @@ def _contains_command(entry: Any, command: str) -> bool:
 
 
 def modify_hooks(agent: str, project: str | Path, *, apply: bool = False,
-                 remove: bool = False, config_path: Path | None = None) -> dict:
-    result = hook_configuration(agent, project, remove=remove, config_path=config_path)
+                 remove: bool = False, config_path: Path | None = None, capture_context: bool = False) -> dict:
+    result = hook_configuration(agent, project, remove=remove, config_path=config_path, capture_context=capture_context)
     if not apply:
         return {**result, "applied": False}
     path = Path(result["config_path"])
     path.parent.mkdir(parents=True, exist_ok=True)
     # Reject configurations changed between read and write? single-process preview
     # doesn't reserve the host settings file; operators must review after editing.
-    temp = path.with_name(path.name + ".mirrormap-tmp")
-    if temp.exists() or temp.is_symlink():
-        raise AuditError("Temporary config file already exists")
-    with temp.open("x", encoding="utf-8") as out:
-        json.dump(result["configuration"], out, indent=2)
-        out.write("\n")
-        out.flush()
-        os.fsync(out.fileno())
-    if os.name != "nt":
-        os.chmod(temp, 0o600)
-    os.replace(temp, path)
+    # A unique, private temp file cannot block future installs after a crash.
+    fd, temp_name = tempfile.mkstemp(prefix=path.name + ".mirrormap-", suffix=".tmp",
+                                     dir=path.parent)
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as out:
+            json.dump(result["configuration"], out, indent=2)
+            out.write("\n")
+            out.flush()
+            os.fsync(out.fileno())
+        if path.is_symlink():
+            raise AuditError("Refusing to replace symlinked settings")
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
     return {**result, "applied": True}
 
 
@@ -710,13 +741,19 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--agent", required=True, choices=AGENTS)
     p.add_argument("--event", required=True)
     p.add_argument("--project", required=True)
+    p.add_argument("--capture-context", action="store_true")
     for cmd in ("install-hooks", "uninstall-hooks"):
         p = cmds.add_parser(cmd, help="preview project-filtered user-level hooks; --apply to change")
         p.add_argument("--agent", required=True, choices=AGENTS)
         p.add_argument("--project", required=True)
         p.add_argument("--apply", action="store_true")
+        p.add_argument("--capture-context", action="store_true", help="opt in to bounded redacted user/assistant excerpts")
+    from . import relay_state
+    relay_state.add_commands(cmds)
     args = parser.parse_args(argv)
     try:
+        if relay_state.handles(args.command):
+            return relay_state.dispatch(args)
         if args.command == "hook":
             # Host hook failures must not block user operations or print raw inputs.
             try:
@@ -724,7 +761,7 @@ def main(argv: list[str] | None = None) -> int:
                 if len(raw) > MAX_HOOK_BYTES:
                     raise AuditError("Hook input too large")
                 event = json.loads(raw.decode("utf-8")) if raw.strip() else {}
-                result = ingest_hook(args.agent, args.event, event, args.project)
+                result = ingest_hook(args.agent, args.event, event, args.project, capture_context=args.capture_context)
                 is_start = args.event.lower() == "sessionstart"
                 is_prompt = args.event in {"UserPromptSubmit", "beforeSubmitPrompt"}
                 if result.get("recorded") and (is_start or is_prompt):
@@ -766,7 +803,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if report["passed"] else 1
         elif args.command in {"install-hooks", "uninstall-hooks"}:
             _json(modify_hooks(args.agent, args.project, apply=args.apply,
-                               remove=args.command == "uninstall-hooks"))
+                               remove=args.command == "uninstall-hooks", capture_context=args.capture_context))
         return 0
     except (AuditError, OSError, ValueError, sqlite3.Error) as e:
         print(f"Relay error: {e}", file=sys.stderr)
