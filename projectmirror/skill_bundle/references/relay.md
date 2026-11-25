@@ -11,3 +11,8 @@ The complete user guide is in `docs/guides/relay.md` in the project source. Do n
 - The default SQLite store is local to the OS user. Cross-device synchronization is unsupported in this preview.
 
 - To explicitly carry a selected task into the new host session, require user confirmation that the old agent stopped, then use `relay adopt --from OLD_SESSION_ID --into NEW_SESSION_ID --confirm-source-stopped`. This links notes and tracking, not host permissions.
+
+
+## Persistent project state preview
+
+Use `relay save --session ID --stage implementation --next 'precise remaining action'` for deliberate switching, `relay history --session ID` for recorded save points, and `relay recover --session ID --budget standard` for review. Older checkpoint data may lack historical fields. The optional `--capture-context` hook setting collects bounded user/assistant excerpts, not hidden reasoning; metadata remains the default. Reconcile pending operations after manual inspection, review merge candidates, and never transfer execution authority. Portable import is a read-only review, not a restore. See the source guide `docs/guides/relay-state.md`.

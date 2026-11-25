@@ -1,3 +1,5 @@
+> **Persistent project state preview:** See the [new save, history and recovery workflow](relay-state.md) for deliberate switching, optional excerpt capture, reconciliation and portable context. Metadata-only remains the default.
+
 # MirrorMap Relay — opt-in agent session continuity (v0.6 development preview)
 
 Relay is an **experimental local metadata recorder and verified handoff interface** for interrupted coding-agent sessions. It does **not** transfer another model's hidden thoughts, read private conversation transcripts, or automatically execute the next operation. A saved checkpoint provides a trustworthy *local consistency check*, not proof that the last tool call succeeded or that the model's memory is complete.
