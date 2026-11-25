@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="assets/mirrormap-atlas.svg" width="100%" alt="MirrorMap — evidence over assumption. Three independently grounded maps converge into a human-gated audit." />
+<img src="assets/mirrormap-logo.webp" width="256" alt="MirrorMap logo — fractured glass map connected by a dotted route" />
+
+<h1>MirrorMap</h1>
 
 <br>
 
@@ -94,6 +96,8 @@ A repository can have a login page and still lack a working login flow. A test c
 | Depend on one agent | Provide a portable skill, CLI, SDK, and experimental MCP |
 
 ## The Evidence Atlas
+
+<img src="assets/mirrormap-atlas.svg" width="100%" alt="MirrorMap — evidence over assumption. Three independently grounded maps converge into a human-gated audit." />
 
 ```mermaid
 flowchart LR
