@@ -61,7 +61,7 @@ def normalize(kind, data):
         "intent": {"title", "description", "protected_paths", "refs", "locked"},
         "failure": {"title", "description", "attempt", "outcome", "refs", "tags"},
         "review": {"target", "reviewer", "verdict", "description", "refs"},
-        "model": {"title", "capabilities", "cost_per_million", "description", "refs"},
+        "model": {"title", "capabilities", "cost_per_million", "description", "refs", "observations"},
         "branch": {"title", "description", "session", "checkpoint", "checkpoint_digest", "snapshot_digest"},
     }
     if kind not in fields or set(data) - fields[kind]:
@@ -80,6 +80,19 @@ def normalize(kind, data):
             if type(v) is not int or v < 1:
                 raise AuditError("Invalid checkpoint")
             out[k] = v
+        elif k == "observations":
+            if not isinstance(v, list) or len(v)>40:
+                raise AuditError("Expected bounded model observations")
+            observations=[]
+            for entry in v:
+                if not isinstance(entry,dict) or set(entry)!={"task","trials","passed","mean_tokens","source"}:
+                    raise AuditError("Invalid model observation fields")
+                if (type(entry["trials"]) is not int or not 1<=entry["trials"]<=1000000
+                    or type(entry["passed"]) is not int or not 0<=entry["passed"]<=entry["trials"]
+                    or type(entry["mean_tokens"]) is not int or not 0<=entry["mean_tokens"]<=10**9):
+                    raise AuditError("Invalid model observation counts")
+                observations.append({**entry,"task":text(entry["task"]),"source":text(entry["source"])})
+            out[k]=observations
         elif k == "cost_per_million":
             if type(v) not in (int, float) or not 0 <= v <= 1_000_000:
                 raise AuditError("Cost must be a nonnegative finite amount in common configured units")
@@ -177,6 +190,7 @@ def put(repo, kind, record_id, data, *, confirm=False, expected_version=None, un
                     raise AuditError("Locked intent requires an explicit reviewed revision reason")
                 # Preserve the revision reason as a recorded provenance reference.
                 data["refs"] = _strings(data.get("refs", []) + ["Lock revision: " + text(unlock_reason)], "refs")
+                data = normalize(kind,data)
             signed = {"workspace": str(root), "kind": kind, "record_id": rid,
                       "version": version+1, "payload": data, "created_at": int(time.time()),
                       "previous_hash": prev}
@@ -217,7 +231,7 @@ def guardian(repo, paths):
         if not intent["locked"]:
             continue
         for path in paths:
-            if any(path == p or path.startswith(p + "/") for p in intent["protected_paths"]):
+            if any(path == p or path.startswith(p + "/") or p.startswith(path + "/") for p in intent["protected_paths"]):
                 conflicts.append({"intent": record["record_id"], "version": record["version"],
                                   "path": path, "reason": "protected_path_overlap"})
     return {"proposed_paths": paths, "review_required": bool(conflicts), "conflicts": conflicts,
@@ -252,7 +266,14 @@ def route(repo, capability):
     for row in records(repo, "model"):
         p = row["payload"]
         if capability in {x.casefold() for x in p["capabilities"]}:
-            candidates.append({"id": row["record_id"], **p})
-    candidates.sort(key=lambda x: (x.get("cost_per_million", float("inf")), x["id"]))
-    return {"task": capability, "candidates": candidates, "basis": "user-declared capability and comparable cost",
+            observations=[o for o in p.get("observations",[]) if o["task"].casefold()==capability]
+            trials=sum(o["trials"] for o in observations)
+            passed=sum(o["passed"] for o in observations)
+            candidates.append({"id": row["record_id"], **p,"recorded_trials":trials,
+                               "recorded_pass_fraction":passed/trials if trials else None})
+    candidates.sort(key=lambda x: (x["recorded_pass_fraction"] is None,
+                                    -(x["recorded_pass_fraction"] or 0),
+                                    x.get("cost_per_million", float("inf")), x["id"]))
+    return {"task": capability, "candidates": candidates, "basis": "user-declared capability, recorded task outcomes then comparable cost",
+            "measurements_independently_verified":False,
             "automatically_dispatched": False, "execution_authorized": False}

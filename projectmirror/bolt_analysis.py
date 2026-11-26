@@ -30,7 +30,10 @@ def audit_data(repo, directory):
     if manifest.get("project", {}).get("repo") != str(root):
         raise AuditError("Audit belongs to a different workspace")
     # Validate every listed file before digesting; prevent unbounded file reads.
-    for entry in handoff.get("artifacts", []):
+    entries=handoff.get("artifacts")
+    if not isinstance(entries,list) or len(entries)>200:
+        raise AuditError("Invalid or oversized audit artifact list")
+    for entry in entries:
         if not isinstance(entry, dict):
             raise AuditError("Invalid handoff entry")
         name = entry.get("name")
@@ -61,10 +64,13 @@ def completion_gate(repo, directory):
     unresolved = [f for f in findings["findings"] if f.get("requirement_id") and f["classification"] != "complete"]
     current_clean = bool(revision and snapshot["git_available"] and snapshot["head"] == revision
                          and not snapshot["changed"] and not snapshot["truncated"])
-    return {"status": "recorded_evidence_ready_for_review" if current_clean and approved and not unresolved else "review_required",
+    capture=manifest.get("bolt_capture",{})
+    capture_matches=(capture.get("before")==snapshot and capture.get("after")==snapshot)
+    return {"status": "recorded_evidence_ready_for_review" if current_clean and capture_matches and approved and not unresolved else "review_required",
             "approved_count": len(approved), "unresolved": unresolved, "current_clean_revision": current_clean,
+            "capture_snapshot_matches":capture_matches,
             "execution_authorized": False, "completion_certified": False,
-            "notice": "Reviewed artifact bytes and revision only; tests, origin and functional behavior are not independently attested."}
+            "notice": "Reviewed artifact bytes and recorded clean snapshots only; old audits without capture snapshots require review. Tests, origin and functional behavior are not independently attested."}
 
 
 def regression(repo, before, after):
@@ -108,7 +114,7 @@ def _sources(root, limit):
     return files, incomplete
 
 
-def dependencies(repo, changed, hops=2, limit=2000):
+def dependencies(repo, changed, hops=2, limit=2000, audit=None):
     root = workspace(repo)
     if not 1 <= hops <= 3 or not 1 <= limit <= 5000:
         raise AuditError("Dependency bounds exceeded")
@@ -143,6 +149,7 @@ def dependencies(repo, changed, hops=2, limit=2000):
                         prefix = (node.module or "").replace(".", "/")
                     modules = [prefix] + [prefix.rstrip("/")+"/"+x.name for x in node.names]
                 for module in modules:
+                    module=os.path.normpath(module).replace("\\","/")
                     add(name, module+".py")
                     add(name, module+"/__init__.py")
         elif path.suffix in {".js",".jsx",".ts",".tsx"}:
@@ -163,9 +170,18 @@ def dependencies(repo, changed, hops=2, limit=2000):
                 visited.add(parent)
                 impacted.append({"path": parent, "distance": distance+1, "via": path})
                 queue.append((parent, distance+1))
-    return {"changed": changed, "possible_dependents": impacted, "scan_incomplete": incomplete,
+    result={"changed": changed, "possible_dependents": impacted, "scan_incomplete": incomplete,
             "scanned_files": len(files), "max_hops": hops, "execution_authorized": False,
             "notice": "Static Python imports and JS/TS relative import heuristics only; dynamic imports, aliases and runtime behavior may be missed."}
+    if audit is not None:
+        _, manifest, _, names, read=audit_data(root,audit)
+        if not {"implementation-map.json","links.json"} <= names:
+            raise AuditError("Audit lacks digest-verified implementation map or reviewed links")
+        result["reviewed_requirement_impacts"]=impact_preview(read("implementation-map.json"),
+                                                               read("links.json"),sorted(visited))
+        result["mapping_revision"]=manifest["project"].get("revision")
+        result["mapping_revision_matches_head"]=result["mapping_revision"]==relay.workspace_snapshot(root).get("head")
+    return result
 
 
 def dead_features(repo, limit=2000):

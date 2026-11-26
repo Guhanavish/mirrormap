@@ -31,6 +31,7 @@ jobs:
           python -m projectmirror audit --help
           python -m projectmirror relay --help
           python -m projectmirror relay install-hooks --help
+          python -m projectmirror bolt --help
       - name: Build package
         run: python -m pip wheel --no-deps . --wheel-dir dist
       - name: Check wheel contents and excluded launch assets
@@ -55,3 +56,9 @@ jobs:
           test -s "${RUNNER_TEMP}/mirrormap-ci/audit-report.md"
           test -s "${RUNNER_TEMP}/mirrormap-ci/evidence-passports.json"
           python -m projectmirror verify-handoff --out "${RUNNER_TEMP}/mirrormap-ci"
+
+      - name: Optional encrypted BOLT transfer
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m pip install '.[bolt-crypto]'
+          MIRRORMAP_REQUIRE_BOLT_CRYPTO=1 python -m unittest discover -s tests -p test_bolt.py -v

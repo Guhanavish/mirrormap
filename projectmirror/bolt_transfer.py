@@ -8,6 +8,7 @@ from pathlib import Path
 from . import relay, relay_state, bolt_memory
 from .core import AuditError
 from .bolt import write_private, read_json, _session
+from .bolt_analysis import firewall
 
 AAD=b"MirrorMap BOLT context package v1"
 MAX=2_000_000
@@ -86,4 +87,5 @@ def import_package(repo,key,source):
               and not saved.get("truncated") and not current.get("truncated") and comparable(saved)==comparable(current))
     return {"context":context,"records":payload.get("records",[]),"authenticated_with_shared_key":True,
             "clean_revision_matches":same,"origin_identity_verified":False,"ready_for_review":False,
-            "execution_authorized":False,"notice":"Authenticated encryption proves key possession, not identity or authorization. Import is a preview; nothing is restored or written into project memory."}
+            "execution_authorized":False,"firewall":firewall(relay._canonical(payload)[:100000]),
+            "notice":"Authenticated encryption proves key possession, not identity or authorization. Import is a preview; nothing is restored or written into project memory."}

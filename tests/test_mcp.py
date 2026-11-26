@@ -41,7 +41,7 @@ class MCPProtocolTests(unittest.TestCase):
         self.assertEqual({t["name"] for t in tools},
                          {"mirrormap_doctor", "mirrormap_audit", "mirrormap_read_report",
                      "mirrormap_relay_sessions", "mirrormap_relay_resume",
-                     "mirrormap_relay_brief", "mirrormap_relay_context"})
+                     "mirrormap_relay_brief", "mirrormap_relay_context", "mirrormap_bolt_brief", "mirrormap_bolt_guardian"})
         self.assertTrue(all(t["inputSchema"]["additionalProperties"] is False for t in tools))
         self.assertEqual(next(t for t in tools if t["name"] == "mirrormap_audit")["inputSchema"]["required"], ["repo"])
 
