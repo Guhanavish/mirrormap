@@ -142,7 +142,7 @@ class EfficiencyTests(unittest.TestCase):
             page = json.loads(dispatch(request)["result"]["content"][0]["text"])
             self.assertEqual(page["total_matches"], 1)
             request["params"]["arguments"]["checkpoint"] = True
-            self.assertTrue(dispatch(request)["result"]["isError"])
+            self.assertEqual(dispatch(request)["error"]["code"], -32602)
             request["params"]["arguments"]["checkpoint"] = body["checkpoint"]
         with patch.dict(os.environ, {"MIRRORMAP_ALLOWED_ROOTS": str(self.root / "other")}):
             self.assertTrue(dispatch(request)["result"]["isError"])

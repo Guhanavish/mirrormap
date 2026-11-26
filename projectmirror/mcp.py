@@ -196,7 +196,12 @@ def dispatch(req: Any) -> dict | None:
                 return _error(mid, -32602, str(ex))
             try:
                 result = invoke(name, args)
-                value = {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+                if name in {"mirrormap_relay_brief", "mirrormap_relay_context"}:
+                    from .relay import _canonical
+                    payload = _canonical(result)
+                else:
+                    payload = json.dumps(result, ensure_ascii=False)
+                value = {"content": [{"type": "text", "text": payload}]}
             except (AuditError, OSError, UnicodeError, ValueError, KeyError, TypeError) as ex:
                 value = {"content": [{"type": "text", "text": str(ex)}], "isError": True}
         else:
