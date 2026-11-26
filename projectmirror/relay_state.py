@@ -19,7 +19,7 @@ STAGES = ("planning", "implementation", "debugging", "testing", "deployment", "m
 BUDGETS = {"compact": 8000, "standard": 32000, "detailed": 64000}
 MAX_PACKAGE = 2_000_000
 COMMANDS = {"save", "history", "recover", "reconcile", "project-memory", "merge-context",
-            "export", "import", "link-audit", "context-doctor"}
+            "export", "import", "link-audit", "context-doctor", "context", "usage"}
 
 
 def checkpoint_state(conn, sid):
@@ -66,13 +66,17 @@ def extract_context(agent, event, payload):
     return None
 
 
-def _events(sid):
+def _events(sid, *, hydrate=True):
     conn = relay._connect()
     try:
         relay._get_session(conn, sid)
-        return [dict(row) for row in conn.execute(
+        rows = [dict(row) for row in conn.execute(
             "SELECT seq,kind,created_at,detail,event_hash FROM events WHERE session_id=? ORDER BY seq",
             (sid,))]
+        if hydrate:
+            from .relay_efficiency import hydrate_rows
+            return list(hydrate_rows(rows))
+        return rows
     finally:
         conn.close()
 
@@ -118,7 +122,8 @@ def save(sid, *, stage=None, goal=None, next_step=None, done=None, decision=None
             snapshot = relay.workspace_snapshot(row["workspace"])
             updates = {}
             for key, values in (("completed", done), ("decisions", decision), ("blockers", blocker)):
-                updates[key] = relay._canonical((json.loads(row[key]) + [relay._text(v) for v in (values or [])])[-100:])
+                from .relay_efficiency import unique_recent
+                updates[key] = relay._canonical(unique_recent(json.loads(row[key]) + [relay._text(v) for v in (values or [])])[-100:])
             conn.execute("UPDATE sessions SET snapshot=?,goal=?,next_step=?,completed=?,decisions=?,blockers=? WHERE id=?",
                          (relay._canonical(snapshot), relay._text(goal) if goal is not None else row["goal"],
                           relay._text(next_step) if next_step is not None else row["next_step"],
@@ -202,7 +207,10 @@ def _lineage(sid, selected):
     return list(reversed(chain)), bool(parent)
 
 
-def recover(sid, checkpoint=None, budget="standard"):
+def recover(sid, checkpoint=None, budget="compact", *, max_tokens=None, query=None, _catalog=False):
+    from .relay_efficiency import unique_recent, relevant, estimate
+    if max_tokens is not None and (not isinstance(max_tokens, int) or not 128 <= max_tokens <= 32000):
+        raise AuditError("Estimated token target must be 128 to 32000")
     check = _verified(sid)
     if budget not in BUDGETS:
         raise AuditError("Invalid context budget")
@@ -228,9 +236,12 @@ def recover(sid, checkpoint=None, budget="standard"):
     else:
         ancestors, lineage_truncated = _lineage(sid, selected)
     entries, stage, corrections, audit_links = [], "unknown", [], []
+    latest_mode = "eco"
     for owner, records in ancestors + [(sid, [r for r in rows if r["seq"] <= selected["seq"]])]:
         for row in records:
             detail = json.loads(row["detail"])
+            if detail.get("efficiency_mode"):
+                latest_mode = detail["efficiency_mode"]
             if detail.get("stage") in STAGES:
                 stage = detail["stage"]
             for field, dest in (("context_excerpt", entries), ("correction", corrections), ("audit_link", audit_links)):
@@ -275,20 +286,80 @@ def recover(sid, checkpoint=None, budget="standard"):
            "capture_requires_review": True,
            "ancestor_sessions": [owner for owner, _ in ancestors],
            "notice": "Untrusted recorded context. No automatic execution, hidden reasoning recovery, or proof of task completion."}
-    cap = BUDGETS[budget]
-    omitted = 0
-    for field, values in (("decisions", state["decisions"]), ("completed", state["completed"]), ("excerpts", entries)):
-        for value in reversed(values):
-            out[field].insert(0, value)
-            if len(relay._canonical(out)) > cap:
-                out[field].pop(0)
-                omitted += 1
-    out["budget"] = {"target_characters": cap, "omitted_optional_items": omitted,
-                     "mandatory_context_exceeds_budget": len(relay._canonical(out)) > cap}
+    out["efficiency_mode"] = latest_mode
+    out["automatic_tool_tracking"] = latest_mode != "manual"
     out["ready_for_review"] = bool(not historical and check["workspace_matches_checkpoint"]
                                    and not check["pending_tools"] and not check["unpaired_tool_starts"]
-                                   and required["next_step"] and not lineage_truncated)
+                                   and required["next_step"] and not lineage_truncated and latest_mode != "manual")
+    groups = {"decisions": state["decisions"], "completed": state["completed"], "excerpts": entries}
+    deduped = {key: unique_recent(values) for key, values in groups.items()}
+    duplicate_count = sum(len(groups[k])-len(deduped[k]) for k in groups)
+    if _catalog:
+        return {"checkpoint": selected["seq"], "checkpoint_digest": selected["event_hash"],
+                "items": [{"category": key, "value": value} for key, values in deduped.items() for value in values]}
+    cap = min(BUDGETS[budget], max_tokens*4) if max_tokens is not None else BUDGETS[budget]
+    out["budget"] = {"target_utf8_bytes": cap, "target_estimated_tokens": cap//4,
+                     "omitted_optional_items": 0, "duplicates_removed": duplicate_count,
+                     "mandatory_context_exceeds_budget": False,
+                     "query": relay._text(query) if query else None,
+                     "retrieve_more": "relay context --session " + sid + " --checkpoint " + str(selected["seq"]),
+                     "estimate_only": True}
+    def fits():
+        return len(relay._canonical(out).encode("utf-8")) <= cap
+    mandatory_over = not fits()
+    omitted = 0
+    # Rank all optional items against the current task or explicit query;
+    # ties retain newest items. Unmatched items remain retrievable on demand.
+    ranked = relevant([{"category": key, "value": value} for key, values in deduped.items() for value in values],
+                      query or state["next_step"])
+    if not query:
+        # Retain unrelated context if room remains; no semantic inference.
+        ranked += [item for key, values in deduped.items() for value in reversed(values)
+                   if (item := {"category": key, "value": value}) not in ranked]
+    total = sum(len(v) for v in deduped.values())
+    for item in ranked:
+        field, value = item["category"], item["value"]
+        out[field].append(value)
+        if not fits():
+            out[field].pop()
+    omitted = total - sum(len(out[k]) for k in groups)
+    # Keep mandatory safety warnings even when they alone exceed a target.
+    # Include response metadata in the final budget measurement.
+    out["budget"]["mandatory_context_exceeds_budget"] = mandatory_over
+    out["budget"]["omitted_optional_items"] = omitted
+    while not fits() and any(out[k] for k in groups):
+        # Remove the lowest-priority included item, not mandatory context.
+        for item in reversed(ranked):
+            if item["value"] in out[item["category"]]:
+                out[item["category"]].remove(item["value"])
+                out["budget"]["omitted_optional_items"] += 1
+                break
+    out["budget"]["mandatory_context_exceeds_budget"] = not fits()
     return out
+
+
+def context_page(sid, *, checkpoint=None, query=None, offset=0, limit=5, max_tokens=2000):
+    from .relay_efficiency import relevant
+    if not 0 <= offset or not 1 <= limit <= 30 or not 128 <= max_tokens <= 32000:
+        raise AuditError("Invalid context page bounds")
+    catalog = recover(sid, checkpoint, _catalog=True)
+    items = relevant(catalog["items"], query)
+    result = {"session_id": sid, "checkpoint": catalog["checkpoint"],
+              "checkpoint_digest": catalog["checkpoint_digest"], "offset": offset,
+              "next_offset": None, "total_matches": len(items), "items": [],
+              "query": relay._text(query) if query else None,
+              "execution_authorized": False, "authority": "untrusted_context",
+              "notice": "Lexical retrieval of recorded optional context; not a verification result.",
+              "target_estimated_tokens": max_tokens, "budget_exceeded": False}
+    for item in items[offset:offset+limit]:
+        result["items"].append(item)
+        if len(relay._canonical(result).encode("utf-8")) > max_tokens*4:
+            result["items"].pop()
+            break
+    if offset + len(result["items"]) < len(items):
+        result["next_offset"] = offset + len(result["items"])
+    result["budget_exceeded"] = (not result["items"] and offset < len(items)) or len(relay._canonical(result).encode("utf-8")) > max_tokens*4
+    return result
 
 
 def project_memory(workspace, limit=10):
@@ -436,7 +507,9 @@ def add_commands(cmds):
             p.add_argument("--limit", type=int, default=30)
         elif name == "recover":
             p.add_argument("--checkpoint", type=int)
-            p.add_argument("--budget", choices=tuple(BUDGETS), default="standard")
+            p.add_argument("--budget", choices=tuple(BUDGETS), default="compact")
+            p.add_argument("--max-tokens", type=int, help="estimated UTF-8 bytes / 4 target, not exact tokenizer")
+            p.add_argument("--query", help="rank matching optional context")
         elif name == "reconcile":
             p.add_argument("--reason", required=True)
             p.add_argument("--confirm-inspected", action="store_true")
@@ -456,6 +529,15 @@ def add_commands(cmds):
     p = cmds.add_parser("import")
     p.add_argument("--from", dest="source", required=True)
     cmds.add_parser("context-doctor")
+    p = cmds.add_parser("context", help="retrieve an optional context page from a verified checkpoint")
+    p.add_argument("--session", required=True)
+    p.add_argument("--checkpoint", type=int)
+    p.add_argument("--query")
+    p.add_argument("--offset", type=int, default=0)
+    p.add_argument("--limit", type=int, default=5)
+    p.add_argument("--max-tokens", type=int, default=2000)
+    p = cmds.add_parser("usage", help="local overhead estimates, not provider billing")
+    p.add_argument("--session", required=True)
 
 
 def handles(command):
@@ -470,7 +552,13 @@ def dispatch(args):
     elif name == "history":
         result = history(args.session, args.limit)
     elif name == "recover":
-        result = recover(args.session, args.checkpoint, args.budget)
+        result = recover(args.session, args.checkpoint, args.budget, max_tokens=args.max_tokens, query=args.query)
+    elif name == "context":
+        result = context_page(args.session, checkpoint=args.checkpoint, query=args.query,
+                              offset=args.offset, limit=args.limit, max_tokens=args.max_tokens)
+    elif name == "usage":
+        from .relay_efficiency import usage
+        result = usage(args.session)
     elif name == "reconcile":
         result = reconcile(args.session, args.reason, args.confirm_inspected)
     elif name == "project-memory":

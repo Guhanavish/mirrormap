@@ -219,10 +219,13 @@ def _event(conn: sqlite3.Connection, sid: str, kind: str, detail: dict) -> None:
         raise AuditError("Unknown Relay session")
     stamp = int(time.time())
     previous = row["last_event_hash"]
-    # Persist a full, bounded task-state checkpoint at each durable event.
-    # Older events without checkpoint_state remain valid and readable.
     from .relay_state import checkpoint_state
-    detail = {**detail, "checkpoint_state": checkpoint_state(conn, sid),
+    from .relay_efficiency import encode_checkpoint
+    current = checkpoint_state(conn, sid)
+    # Snapshot bytes already belong to the checkpoint, not a second copy.
+    if detail.get("snapshot") == current["snapshot"]:
+        detail = {k: v for k, v in detail.items() if k != "snapshot"}
+    detail = {**detail, **encode_checkpoint(conn, sid, current),
               "state_digest": _state_digest(conn, sid)}
     payload = {"session_id": sid, "kind": kind, "created_at": stamp,
                "detail": detail, "previous_hash": previous}
@@ -256,8 +259,13 @@ def _create(conn: sqlite3.Connection, agent: str, native: str, workspace: Path) 
     return sid
 
 
-def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | None = None, *, capture_context: bool = False) -> dict:
+def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | None = None, *, capture_context: bool = False, mode: str = "eco") -> dict:
     """Handle host hook metadata. Does not store the original payload."""
+    from .relay_efficiency import MODES
+    if mode not in MODES:
+        raise AuditError("Invalid Relay efficiency mode")
+    if mode == "manual" and event.lower() != "sessionstart":
+        return {"recorded": False, "reason": "manual-mode"}
     if agent not in EVENTS or event not in EVENTS[agent]:
         raise AuditError("Unsupported agent event")
     if not isinstance(payload, dict):
@@ -292,12 +300,25 @@ def ingest_hook(agent: str, event: str, payload: dict, project: str | Path | Non
             if row["status"] == "resumed_elsewhere":
                 return {"recorded": False, "reason": "session-handed-off", "session_id": sid}
             kind = event.lower()
-            details: dict[str, Any] = {"event": event}
-            if capture_context:
+            details: dict[str, Any] = {"event": event, "efficiency_mode": mode}
+            if capture_context and mode != "manual":
                 from .relay_state import extract_context
                 captured = extract_context(agent, event, payload)
                 if captured:
-                    details["context_excerpt"] = captured
+                    # Suppress only consecutive identical excerpts of the same role;
+                    # a repeated correction after a different message still matters.
+                    previous_excerpt = None
+                    for prior in conn.execute("SELECT detail FROM events WHERE session_id=? AND kind IN "
+                                              "('userpromptsubmit','beforesubmitprompt','stop','afteragentresponse') "
+                                              "ORDER BY seq DESC LIMIT 16", (sid,)):
+                        candidate = json.loads(prior["detail"]).get("context_excerpt")
+                        if candidate:
+                            previous_excerpt = candidate
+                            break
+                    if captured != previous_excerpt:
+                        details["context_excerpt"] = captured
+                    else:
+                        details["duplicate_excerpt_suppressed"] = True
             if event in {"PreToolUse", "preToolUse"}:
                 tool = payload.get("tool_name") or payload.get("tool") or "unspecified"
                 details["tool"] = str(tool)[:96]
@@ -393,7 +414,8 @@ def record_note(sid: str, *, title: str | None = None, goal: str | None = None,
                        "next_step": _text(next_step) if next_step is not None else row["next_step"]}
             for field, values in (("completed", done), ("decisions", decision), ("blockers", blocker)):
                 original = json.loads(row[field])
-                updates[field] = _canonical((original + [_text(item) for item in (values or [])])[-100:])
+                from .relay_efficiency import unique_recent
+                updates[field] = _canonical(unique_recent(original + [_text(item) for item in (values or [])])[-100:])
             conn.execute("UPDATE sessions SET title=?,goal=?,next_step=?,completed=?,decisions=?,blockers=? WHERE id=?",
                          (updates["title"], updates["goal"], updates["next_step"], updates["completed"],
                           updates["decisions"], updates["blockers"], sid))
@@ -431,9 +453,14 @@ def verify(sid: str) -> dict:
         previous = ""
         broken = False
         last_detail = None
+        state = None
+        from .relay_efficiency import _apply_patch
         for event in events:
             try:
                 detail = json.loads(event["detail"])
+                if not isinstance(detail, dict):
+                    raise AuditError("Invalid Relay event")
+                state = _apply_patch(detail, state, previous)
                 last_detail = detail
                 candidate = _hash({"session_id": event["session_id"], "kind": event["kind"],
                                    "created_at": event["created_at"], "detail": detail,
@@ -441,9 +468,9 @@ def verify(sid: str) -> dict:
                 if event["previous_hash"] != previous or event["event_hash"] != candidate:
                     broken = True
                 previous = event["event_hash"]
-            except (ValueError, TypeError):
+            except (ValueError, TypeError, AuditError):
                 broken = True
-        if not events or broken or previous != row["last_event_hash"] or not isinstance(last_detail, dict) or last_detail.get("state_digest") != _state_digest(conn, sid):
+        if not events or broken or previous != row["last_event_hash"] or not isinstance(last_detail, dict) or last_detail.get("state_digest") != _state_digest(conn, sid) or (state is not None and state != __import__("projectmirror.relay_state", fromlist=["checkpoint_state"]).checkpoint_state(conn, sid)):
             chain = "invalid"
         else:
             chain = "valid"
@@ -473,29 +500,9 @@ def verify(sid: str) -> dict:
 
 
 
-def milestone_reminder(sid: str) -> str | None:
-    """Return a bounded, optional context hint without reading user prompts.
-
-    A host must allow its model to act on this hint. Metadata-only recording
-    continues if the model never writes milestones. No transcript is inspected.
-    """
-    conn = _connect()
-    try:
-        row = _get_session(conn, sid)
-        last = conn.execute("SELECT COALESCE(MAX(seq),0) FROM events WHERE session_id=? AND kind='agent-note'",
-                            (sid,)).fetchone()[0]
-        since = conn.execute("SELECT COUNT(*) FROM events WHERE session_id=? AND seq>?",
-                             (sid, last)).fetchone()[0]
-        if row["goal"] and row["next_step"] and since < 12:
-            return None
-        return ("MirrorMap Relay tracks metadata automatically, but accurate cross-agent task "
-                "continuation needs explicit brief milestones. At meaningful progress points, "
-                "run: python -m projectmirror relay note --session " + sid +
-                " --goal 'current objective' --next 'specific unfinished action' "
-                "--done 'verified completed item'. Update --decision or --blocker as needed. "
-                "Do not include secrets or copy chat transcripts. This does not authorize execution.")
-    finally:
-        conn.close()
+def milestone_reminder(sid: str, mode: str = "eco") -> str | None:
+    from .relay_efficiency import reminder
+    return reminder(sid, mode)
 
 
 def inspect(sid: str) -> dict:
@@ -653,8 +660,11 @@ def _config_path(agent: str) -> Path:
 
 
 def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
-                       config_path: Path | None = None, capture_context: bool = False) -> dict:
+                       config_path: Path | None = None, capture_context: bool = False, mode: str = "eco") -> dict:
     """Return preview for additive user-level hook config; never mutate without apply."""
+    from .relay_efficiency import MODES
+    if mode not in MODES or (mode == "manual" and capture_context and not remove):
+        raise AuditError("Invalid mode or capture enabled in manual mode")
     if agent not in AGENTS:
         raise AuditError("Agent must be claude, codex, or cursor")
     root = _workspace(project)
@@ -679,7 +689,14 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
                  "--agent", agent, "--event", event, "--project", str(root)]
         old_command = _quote_command(parts)
         capture_command = _quote_command(parts + ["--capture-context"])
-        command = capture_command if capture_context else old_command
+        variants = {old_command, capture_command}
+        for option in MODES:
+            variants.add(_quote_command(parts + ["--mode", option]))
+            variants.add(_quote_command(parts + ["--mode", option, "--capture-context"]))
+        selected = parts + ["--mode", mode]
+        if capture_context:
+            selected.append("--capture-context")
+        command = _quote_command(selected)
         if agent == "cursor":
             record = {"command": command}
         else:
@@ -691,7 +708,7 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
         # Exactly match generated commands, preserve third-party hooks and others.
         # Switch recording modes without duplicating our own hooks.
         # Preserve unrelated commands, including those in grouped hooks.
-        own = {old_command, capture_command}
+        own = variants
         cleaned = []
         for item in existing:
             if isinstance(item, dict) and item.get("command") in own:
@@ -703,17 +720,19 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
                     continue
                 item = {**item, "hooks": children}
             cleaned.append(item)
-        if not remove:
+        enabled = not remove and (mode != "manual" or event.lower() == "sessionstart")
+        if enabled:
             cleaned.append(record)
-        hooks[event] = cleaned
-        if remove and not cleaned:
+            commands.append(command)
+        if cleaned:
+            hooks[event] = cleaned
+        else:
             del hooks[event]
-        commands.append(command)
     if remove and not hooks:
         config.pop("hooks", None)
     return {"agent": agent, "project": str(root), "config_path": str(path),
             "configuration": config, "commands": commands,
-            "action": "remove" if remove else "install",
+            "action": "remove" if remove else "install", "mode": mode,
             "notice": "User-level hooks are project-filtered; no agent settings are changed until --apply."}
 
 
@@ -727,8 +746,8 @@ def _contains_command(entry: Any, command: str) -> bool:
 
 
 def modify_hooks(agent: str, project: str | Path, *, apply: bool = False,
-                 remove: bool = False, config_path: Path | None = None, capture_context: bool = False) -> dict:
-    result = hook_configuration(agent, project, remove=remove, config_path=config_path, capture_context=capture_context)
+                 remove: bool = False, config_path: Path | None = None, capture_context: bool = False, mode: str = "eco") -> dict:
+    result = hook_configuration(agent, project, remove=remove, config_path=config_path, capture_context=capture_context, mode=mode)
     if not apply:
         return {**result, "applied": False}
     path = Path(result["config_path"])
@@ -789,12 +808,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--event", required=True)
     p.add_argument("--project", required=True)
     p.add_argument("--capture-context", action="store_true")
+    from .relay_efficiency import MODES
+    p.add_argument("--mode", choices=MODES, default="eco")
     for cmd in ("install-hooks", "uninstall-hooks"):
         p = cmds.add_parser(cmd, help="preview project-filtered user-level hooks; --apply to change")
         p.add_argument("--agent", required=True, choices=AGENTS)
         p.add_argument("--project", required=True)
         p.add_argument("--apply", action="store_true")
         p.add_argument("--capture-context", action="store_true", help="opt in to bounded redacted user/assistant excerpts")
+        p.add_argument("--mode", choices=MODES, default="eco")
     from . import relay_state
     relay_state.add_commands(cmds)
     args = parser.parse_args(argv)
@@ -808,12 +830,12 @@ def main(argv: list[str] | None = None) -> int:
                 if len(raw) > MAX_HOOK_BYTES:
                     raise AuditError("Hook input too large")
                 event = json.loads(raw.decode("utf-8")) if raw.strip() else {}
-                result = ingest_hook(args.agent, args.event, event, args.project, capture_context=args.capture_context)
+                result = ingest_hook(args.agent, args.event, event, args.project, capture_context=args.capture_context, mode=args.mode)
                 is_start = args.event.lower() == "sessionstart"
                 is_prompt = args.event in {"UserPromptSubmit", "beforeSubmitPrompt"}
                 if result.get("recorded") and (is_start or is_prompt):
                     sid = result["session_id"]
-                    message = milestone_reminder(sid)
+                    message = milestone_reminder(sid, args.mode) if args.agent != "cursor" or is_start else None
                     if args.agent == "cursor":
                         # Cursor's beforeSubmitPrompt output supports prompt gating,
                         # not additional_context injection. Only sessionStart may
@@ -850,7 +872,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0 if report["passed"] else 1
         elif args.command in {"install-hooks", "uninstall-hooks"}:
             _json(modify_hooks(args.agent, args.project, apply=args.apply,
-                               remove=args.command == "uninstall-hooks", capture_context=args.capture_context))
+                               remove=args.command == "uninstall-hooks", capture_context=args.capture_context, mode=args.mode))
         return 0
     except (AuditError, OSError, ValueError, sqlite3.Error) as e:
         print(f"Relay error: {e}", file=sys.stderr)
