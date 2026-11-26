@@ -152,6 +152,8 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
     project = _repo_path(repo)
     target = _output_path(project, out)
     m = manifest(project)
+    from .relay import workspace_snapshot
+    m["bolt_capture"]={"before":workspace_snapshot(project)}
     m["mode"] = mode
     m["scan_budget"] = max_files
     m["limitations"] = ["Source is not executed", "Semantic links require manual review", "Browser checks require external host tooling"]
@@ -234,6 +236,8 @@ def audit_project(repo: str | Path, spec: str | Path | None = None,
         else:
             m["limitations"].append("No baseline supplied: no drift comparison performed")
             save(target / "audit-manifest.json", m)
+    m["bolt_capture"]["after"]=workspace_snapshot(project)
+    save(target / "audit-manifest.json",m)
     handoff_files = {f.name: f for f in sorted(target.iterdir())
                      if f.is_file() and f.suffix.lower() in {".json", ".md", ".mmd", ".html"}}
     save(target / "audit-handoff.json", handoff_manifest(m, handoff_files))
@@ -279,6 +283,9 @@ def install_skill(destination: Path, *, apply: bool) -> dict:
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
+    if argv and argv[0] == "bolt":
+        from .bolt import main as bolt_main
+        return bolt_main(list(argv[1:]))
     if argv and argv[0] == "relay":
         from .relay import main as relay_main
         return relay_main(list(argv[1:]))

@@ -47,6 +47,19 @@ npx skills add Guhanavish/mirrormap
 
 This requires a recent Node.js runtime for the installer (the Skills CLI's current minimum is Node.js 22.20+); MirrorMap's underlying Python CLI separately requires Python 3.10+. **Installation with every individual agent has not been certified**. You can always use the repository directly with `python -m projectmirror`, or install the root [`SKILL.md`](SKILL.md) manually following your agent's instructions. See the [install and integration guide](docs/getting-started.md).
 
+## MirrorMap BOLT — Persistent Project Intelligence
+
+**BOLT is the new integrated development preview**, joining Relay, Evidence Intelligence and token-efficient recovery with versioned project DNA/UI memory, intent locks, failure memory, checkpoint branching, review consensus, capability-based model routing, journey replay and context gap detection. It adds bounded dependency and dead-feature candidates, regression/completion review, rollback previews, a context firewall, an offline dashboard, optional encrypted context export and a paired benchmark importer.
+
+```bash
+mirrormap bolt --help
+mirrormap bolt brief --repo PROJECT --session SESSION_ID --max-tokens 2000
+mirrormap bolt guardian --repo PROJECT --path src/ui
+mirrormap bolt dashboard --repo PROJECT --out /outside/bolt.html
+```
+
+BOLT is local-first and review-only. It does not automatically execute agents, enforce host permissions, certify runtime behavior or restore source files. Real-host benchmarking and cross-device field trials are still needed. [BOLT guide and feature limits](docs/guides/bolt.md).
+
 ## MirrorMap Relay — Agent Context Continuity
 
 ### Token-efficient Relay (development preview)

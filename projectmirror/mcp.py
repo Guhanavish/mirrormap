@@ -50,6 +50,13 @@ TOOLS = [
          "limit": {"type": "integer", "minimum": 1, "maximum": 30},
          "max_tokens": {"type": "integer", "minimum": 128, "maximum": 32000}},
          "additionalProperties": False}},
+    {"name":"mirrormap_bolt_brief","description":"BOLT compact project context, intent locks and relevant failure memory. Read-only.",
+     "inputSchema":{"type":"object","required":["repo","session_id"],"properties":{
+         "repo":{"type":"string"},"session_id":{"type":"string"},"query":{"type":"string"},
+         "max_tokens":{"type":"integer","minimum":128,"maximum":16000}},"additionalProperties":False}},
+    {"name":"mirrormap_bolt_guardian","description":"Review explicit locked path scope. Never grants or enforces permissions.",
+     "inputSchema":{"type":"object","required":["repo","path"],"properties":{
+         "repo":{"type":"string"},"path":{"type":"string"}},"additionalProperties":False}},
     {"name": "mirrormap_read_report", "description": "Read one generated MirrorMap report for an allowlisted project, capped to 30,000 characters.",
      "inputSchema": {"type": "object", "required": ["out"], "properties": {
          "out": {"type": "string"},
@@ -135,6 +142,15 @@ def invoke(name: str, args: dict) -> dict:
         return context_page(args["session_id"], checkpoint=args["checkpoint"], query=args.get("query"),
                             offset=args.get("offset", 0), limit=args.get("limit", 5),
                             max_tokens=args.get("max_tokens", 2000))
+    if name in {"mirrormap_bolt_brief","mirrormap_bolt_guardian"}:
+        from .bolt import brief
+        from .bolt_memory import guardian, workspace
+        root=_allowlisted(Path(args["repo"]))
+        # A nested allowed path must not expand access to its Git root.
+        root=_allowlisted(workspace(root))
+        if name=="mirrormap_bolt_guardian":
+            return guardian(root,[args["path"]])
+        return brief(root,args["session_id"],args.get("query"),args.get("max_tokens",2000))
     if name == "mirrormap_read_report":
         out = Path(args["out"]).expanduser().resolve()
         m = load(out / "audit-manifest.json")
@@ -196,7 +212,7 @@ def dispatch(req: Any) -> dict | None:
                 return _error(mid, -32602, str(ex))
             try:
                 result = invoke(name, args)
-                if name in {"mirrormap_relay_brief", "mirrormap_relay_context"}:
+                if name in {"mirrormap_relay_brief", "mirrormap_relay_context", "mirrormap_bolt_brief"}:
                     from .relay import _canonical
                     payload = _canonical(result)
                 else:

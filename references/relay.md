@@ -21,3 +21,8 @@ Use `relay save --session ID --stage implementation --next 'precise remaining ac
 ## Token-efficient handoffs (development preview)
 
 Prefer `relay recover --session ID --budget compact` or MCP `mirrormap_relay_brief` for initial recovery; use `relay context --session ID --checkpoint NUMBER --query "specific question"` or `mirrormap_relay_context` for optional context only when needed. Do not request repeated full summaries. Use notes for new information or significant milestones. Eco is the default, with balanced/detailed/manual recording modes. User opt-in is required for excerpts. Approximate token targets can overflow for mandatory safety information; review all warnings. `relay usage --session ID` reports local estimates, not actual provider tokens saved. Legacy resume remains supported.
+
+
+## BOLT integration
+
+BOLT uses the same local Relay store and project identity. Prefer a compact BOLT brief for a project with approved memory and use `bolt gaps` to find missing next steps or evidence. Record only reviewed failure attempts and intent locks, using version checks. `bolt guardian` is a path-scope advisory check, not a permission service. Context branches refer to existing checkpoints; no automatic Git operation. Optional encrypted context packages require a private key outside the repository and review on import. See `docs/guides/bolt.md` in the source checkout.

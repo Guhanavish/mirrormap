@@ -1,3 +1,11 @@
+## Unreleased — MirrorMap BOLT development preview
+
+- Introduce local, versioned project DNA/UI memory, explicit intent locks, reviewed failure records and scope checks.
+- Add checkpoint references and comparisons, journey summaries, gap questions, compact project briefs, reviewer consensus and model capability/observation routing.
+- Add static dependency and dead-feature candidates, digest-verified completion/regression review, read-only rollback previews and heuristic context firewall.
+- Add offline HTML snapshots, optional AES-256-GCM encrypted context review, paired benchmark aggregation and read-only BOLT MCP tools.
+- Preserve existing Relay/audit commands and standard-library core. No claim of automated host enforcement, live benchmark savings, fully isolated agent orchestration or runtime correctness.
+
 ## Unreleased — Relay Token Efficiency Engine preview
 
 - Default Eco mode and adaptive reminder thresholds; balanced, detailed and manual recording modes.

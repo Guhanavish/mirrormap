@@ -13,6 +13,9 @@ authors = [{name = "MirrorMap contributors"}]
 keywords = ["agent-skill", "ai-agents", "spec-drift", "audit", "mindmap", "developer-tools"]
 classifiers = ["Programming Language :: Python :: 3", "Operating System :: OS Independent", "Topic :: Software Development :: Quality Assurance"]
 
+[project.optional-dependencies]
+bolt-crypto = ["cryptography>=42"]
+
 [project.scripts]
 projectmirror = "projectmirror.__main__:cmd_main"
 mirrormap = "projectmirror.experience:main"
