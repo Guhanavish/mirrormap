@@ -279,6 +279,9 @@ def install_skill(destination: Path, *, apply: bool) -> dict:
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
+    if argv and argv[0] == "bolt":
+        from .bolt import main as bolt_main
+        return bolt_main(list(argv[1:]))
     if argv and argv[0] == "relay":
         from .relay import main as relay_main
         return relay_main(list(argv[1:]))
