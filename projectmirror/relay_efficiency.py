@@ -149,10 +149,13 @@ def usage(sid):
         raise AuditError("Session changed; retry")
     reminders = [json.loads(r["detail"]) for r in rows if r["kind"] == "milestone-reminder"]
     raw = sum(len(r["detail"].encode("utf-8")) for r in rows)
-    expanded = sum(len(r["detail"].encode("utf-8")) for r in hydrate_rows(rows))
+    expanded = sum(len(relay._canonical({k: v for k, v in json.loads(r["detail"]).items()
+                                         if k != "checkpoint_patch"}).encode("utf-8"))
+                   for r in hydrate_rows(rows))
     return {"session_id": sid, "recorded_events": len(rows),
             "checkpoint_deltas": sum("checkpoint_patch" in json.loads(r["detail"]) for r in rows),
             "reminders_prepared": len(reminders),
+            "duplicate_excerpts_suppressed": sum(bool(json.loads(r["detail"]).get("duplicate_excerpt_suppressed")) for r in rows),
             "reminder_utf8_bytes": sum(x["utf8_bytes"] for x in reminders),
             "estimated_reminder_tokens": sum(math.ceil(x["utf8_bytes"]/4) for x in reminders),
             "journal_detail_bytes": raw, "expanded_detail_bytes": expanded,

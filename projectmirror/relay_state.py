@@ -208,7 +208,7 @@ def _lineage(sid, selected):
 
 
 def recover(sid, checkpoint=None, budget="compact", *, max_tokens=None, query=None, _catalog=False):
-    from .relay_efficiency import unique_recent, relevant, estimate
+    from .relay_efficiency import unique_recent, relevant
     if max_tokens is not None and (not isinstance(max_tokens, int) or not 128 <= max_tokens <= 32000):
         raise AuditError("Estimated token target must be 128 to 32000")
     check = _verified(sid)
@@ -290,15 +290,19 @@ def recover(sid, checkpoint=None, budget="compact", *, max_tokens=None, query=No
     out["automatic_tool_tracking"] = latest_mode != "manual"
     out["ready_for_review"] = bool(not historical and check["workspace_matches_checkpoint"]
                                    and not check["pending_tools"] and not check["unpaired_tool_starts"]
-                                   and required["next_step"] and not lineage_truncated and latest_mode != "manual")
+                                   and required["next_step"] and not lineage_truncated
+                                   and check["automatic_tool_coverage_complete"] and latest_mode != "manual")
     groups = {"decisions": state["decisions"], "completed": state["completed"], "excerpts": entries}
     deduped = {key: unique_recent(values) for key, values in groups.items()}
     duplicate_count = sum(len(groups[k])-len(deduped[k]) for k in groups)
     if _catalog:
         return {"checkpoint": selected["seq"], "checkpoint_digest": selected["event_hash"],
-                "items": [{"category": key, "value": value} for key, values in deduped.items() for value in values]}
+                "items": [{"category": key, "value": value}
+                          for key, values in {**deduped, "corrections": corrections,
+                                              "blockers": state["blockers"], "audit_links": audit_links}.items()
+                          for value in values]}
     cap = min(BUDGETS[budget], max_tokens*4) if max_tokens is not None else BUDGETS[budget]
-    out["budget"] = {"target_utf8_bytes": cap, "target_estimated_tokens": cap//4,
+    out["budget"] = {"target_utf8_bytes": cap, "target_characters": cap, "target_estimated_tokens": cap//4,
                      "omitted_optional_items": 0, "duplicates_removed": duplicate_count,
                      "mandatory_context_exceeds_budget": False,
                      "query": relay._text(query) if query else None,
@@ -314,8 +318,9 @@ def recover(sid, checkpoint=None, budget="compact", *, max_tokens=None, query=No
                       query or state["next_step"])
     if not query:
         # Retain unrelated context if room remains; no semantic inference.
-        ranked += [item for key, values in deduped.items() for value in reversed(values)
-                   if (item := {"category": key, "value": value}) not in ranked]
+        unmatched = [{"category": key, "value": value} for key, values in deduped.items()
+                     for value in reversed(values)]
+        ranked.extend(item for item in unmatched if item not in ranked)
     total = sum(len(v) for v in deduped.values())
     for item in ranked:
         field, value = item["category"], item["value"]
@@ -356,8 +361,12 @@ def context_page(sid, *, checkpoint=None, query=None, offset=0, limit=5, max_tok
         if len(relay._canonical(result).encode("utf-8")) > max_tokens*4:
             result["items"].pop()
             break
-    if offset + len(result["items"]) < len(items):
-        result["next_offset"] = offset + len(result["items"])
+    while True:
+        result["next_offset"] = (offset + len(result["items"])
+                                 if result["items"] and offset + len(result["items"]) < len(items) else None)
+        if len(relay._canonical(result).encode("utf-8")) <= max_tokens*4 or not result["items"]:
+            break
+        result["items"].pop()
     result["budget_exceeded"] = (not result["items"] and offset < len(items)) or len(relay._canonical(result).encode("utf-8")) > max_tokens*4
     return result
 
