@@ -142,7 +142,7 @@ def relevant(items, query):
 
 def usage(sid):
     """Local journal metrics; neither host billings nor observed counterfactual savings."""
-    from .relay_state import _verified, _events
+    from .relay_state import _verified, _events, recover
     check = _verified(sid)
     rows = _events(sid, hydrate=False)
     if not rows or rows[-1]["event_hash"] != check["verified_event_hash"]:
@@ -152,6 +152,8 @@ def usage(sid):
     expanded = sum(len(relay._canonical({k: v for k, v in json.loads(r["detail"]).items()
                                          if k != "checkpoint_patch"}).encode("utf-8"))
                    for r in hydrate_rows(rows))
+    compact = estimate(relay._canonical(recover(sid, budget="compact")))
+    detailed = estimate(relay._canonical(recover(sid, budget="detailed")))
     return {"session_id": sid, "recorded_events": len(rows),
             "checkpoint_deltas": sum("checkpoint_patch" in json.loads(r["detail"]) for r in rows),
             "reminders_prepared": len(reminders),
@@ -160,6 +162,9 @@ def usage(sid):
             "estimated_reminder_tokens": sum(math.ceil(x["utf8_bytes"]/4) for x in reminders),
             "journal_detail_bytes": raw, "expanded_detail_bytes": expanded,
             "local_storage_bytes_avoided": max(0, expanded-raw),
+            "signed_detail_byte_difference": expanded-raw,
+            "compact_recovery_estimate": compact, "detailed_recovery_estimate": detailed,
+            "estimated_recovery_payload_token_difference": detailed["estimated_tokens"]-compact["estimated_tokens"],
             "provider_tokens_measured": False, "actual_tokens_saved": None,
             "notice": "Local estimates only; excludes host caching, model output, tool schemas, and provider-specific tokenization. No model called by Relay.",
             "execution_authorized": False}

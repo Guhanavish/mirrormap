@@ -126,6 +126,27 @@ class EfficiencyTests(unittest.TestCase):
         self.assertFalse(state.recover(sid)["ready_for_review"])
         self.assertFalse(relay.verify(sid)["automatic_tool_coverage_complete"])
 
+    def test_mcp_compact_and_context_allowlist(self):
+        from projectmirror.mcp import dispatch
+        sid = self.start()
+        state.save(sid, goal="Player", next_step="Verify seek", decision=["Independent seek"])
+        request = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                   "params": {"name": "mirrormap_relay_brief", "arguments": {"session_id": sid, "max_tokens": 2000}}}
+        with patch.dict(os.environ, {"MIRRORMAP_ALLOWED_ROOTS": str(self.repo)}):
+            answer = dispatch(request)
+            self.assertFalse(answer["result"].get("isError", False))
+            body = json.loads(answer["result"]["content"][0]["text"])
+            self.assertEqual(body["task"]["next_step"], "Verify seek")
+            request["params"] = {"name": "mirrormap_relay_context", "arguments":
+                                 {"session_id": sid, "checkpoint": body["checkpoint"], "query": "seek"}}
+            page = json.loads(dispatch(request)["result"]["content"][0]["text"])
+            self.assertEqual(page["total_matches"], 1)
+            request["params"]["arguments"]["checkpoint"] = True
+            self.assertTrue(dispatch(request)["result"]["isError"])
+            request["params"]["arguments"]["checkpoint"] = body["checkpoint"]
+        with patch.dict(os.environ, {"MIRRORMAP_ALLOWED_ROOTS": str(self.root / "other")}):
+            self.assertTrue(dispatch(request)["result"]["isError"])
+
     def test_old_full_checkpoint_still_reads_after_delta(self):
         sid = self.start()
         with patch.object(efficiency, "encode_checkpoint", side_effect=lambda conn, sid, current: {"checkpoint_state": current}):

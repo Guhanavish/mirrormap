@@ -1,3 +1,10 @@
+## Unreleased — Relay Token Efficiency Engine preview
+
+- Default Eco mode and adaptive reminder thresholds; balanced, detailed and manual recording modes.
+- Field-level checkpoint deltas with periodic full anchors and legacy history hydration.
+- Exact deduplication, relevance-ranked compact recovery, estimated token budgets, checkpoint-bound progressive retrieval, and read-only MCP brief/context tools.
+- Local usage estimates and serialized payload comparisons; actual provider tokens and cross-agent savings remain unmeasured.
+
 ## Unreleased — persistent project state preview
 
 - Durable event checkpoints, explicit manual save, historical recovery and character-budgeted continuation context.

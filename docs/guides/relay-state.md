@@ -1,3 +1,5 @@
+> **Token-efficient recovery:** Prefer the new compact recovery defaults and [progressive retrieval guide](relay-efficiency.md). New events use delta checkpoints; the CLI reconstructs historical snapshots. Token targets are estimates, not exact tokenizer limits.
+
 # Persistent project state (development preview)
 
 Relay now records a bounded task snapshot with each durable hook event and supports deliberate switching even when an agent is healthy. It does not copy a model's hidden state, read transcript paths, run tests, or restore source files.

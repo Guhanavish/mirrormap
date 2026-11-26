@@ -584,5 +584,9 @@ def dispatch(args):
         result = {"store": str(relay.relay_home()), "supported_adapters": list(relay.AGENTS),
                   "live_host_verified": False, "capture_default": "metadata_only",
                   "notice": "Opt-in excerpts require compatible host fields; run field validation."}
-    relay._json(result)
+    if name in {"recover", "context"}:
+        # Budget accounting uses the exact compact JSON payload (excluding newline).
+        print(relay._canonical(result))
+    else:
+        relay._json(result)
     return 0
