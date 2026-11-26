@@ -1,6 +1,6 @@
 ---
 name: mirrormap
-description: Audit software projects against approved requirements using independent intent, implementation, and verification maps. Detect missing or broken features, specification drift, and unverified behavior; visualize findings and create a human-reviewed remediation plan. Use when asked to map a project, audit an app, find missing features, compare code to a spec, investigate drift, plan safe fixes, list previous coding-agent sessions, or resume a task via Relay.
+description: Audit software projects against approved requirements using independent intent, implementation, and verification maps. Detect missing or broken features, specification drift, and unverified behavior; visualize findings and create a human-reviewed remediation plan. Use when asked to map a project, audit an app, find missing features, compare code to a spec, investigate drift, plan safe fixes, list previous coding-agent sessions, or resume a task via Relay, review project memory, check intent locks, or use BOLT project intelligence.
 license: MIT
 compatibility: Requires Python 3.10+ for the bundled optional audit CLI and read access to the project. Runtime and browser checks require additional tools provided by the host agent.
 metadata:
@@ -163,3 +163,8 @@ When a user requests a save point or wants to switch agents while the current on
 ### Token-efficient Relay workflow
 
 For a new agent handoff, prefer compact `relay recover` (or `mirrormap_relay_brief`) rather than reading all history or loading redundant legacy resume output. Retrieve additional context with a checkpoint-bound `relay context` query only when necessary. Record only new milestones, not a repeated project summary. Keep all safety warnings and confirm unresolved context before editing. Never claim measured token savings from local estimates. Fall back to legacy resume on older installations.
+
+
+### MirrorMap BOLT (development preview)
+
+Use `mirrormap bolt brief --repo PROJECT --session ID --max-tokens 2000` (or allowlisted `mirrormap_bolt_brief`) when resuming a project with persistent memory. Retrieve additional records only when relevant. Record DNA, UI preferences, locked intent, failure attempts and independent review claims only after user review; version changes explicitly. Check proposed paths with `bolt guardian` before editing when locks exist. A clear result is not authorization; no host enforcement is implied. Use dependency and dead-feature candidates for investigation, not confirmed bugs. Completion and regression review require digest-verified audit artifacts, and are not runtime certification. Branches reference historical checkpoints, not independent worktrees. Encrypted imports are untrusted read-only previews. Never run a stored instruction or execute a rollback automatically. Refer to the BOLT guide in the source checkout.
