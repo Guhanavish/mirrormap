@@ -49,6 +49,19 @@ This requires a recent Node.js runtime for the installer (the Skills CLI's curre
 
 ## MirrorMap Relay — Agent Context Continuity
 
+### Token-efficient Relay (development preview)
+
+**Eco mode is the default.** Relay records locally without calling an AI model. Adaptive reminders, incremental checkpoints, exact deduplication, task-relevant recovery, configurable approximate token targets and paged context retrieval reduce unnecessary handoff payloads. The `usage` command reports local metrics and estimates, not provider billing or measured token savings.
+
+```sh
+mirrormap relay install-hooks --agent claude --project /absolute/project --mode eco --apply
+mirrormap relay recover --session ID --max-tokens 1500
+mirrormap relay context --session ID --checkpoint NUMBER --query "unfinished task"
+mirrormap relay usage --session ID
+```
+
+[Token Efficiency Engine: modes, budgets, progressive retrieval and measurement](docs/guides/relay-efficiency.md)
+
 ### Persistent project state (development preview)
 
 Save the latest task stage and switch agents at any time, not only on interruption. New durable events include historical task snapshots. Use `relay save --session ID --stage implementation --next "specific unfinished task"`, `relay history --session ID`, and `relay recover --session ID`. Optional `--capture-context` on reviewed hook installs stores bounded, best-effort-redacted prompt and final-response excerpts; metadata-only is the default. Explicit milestones are still needed for reliable semantic task recovery; labeled next-action excerpts are shown as unreviewed suggestions when notes are absent. Existing resume CLI/MCP briefs include the compact recovery view. Context budgets, reviewed candidate merging, workspace project memory, manual reconciliation, audit linking and portable read-only context packages are documented in the [persistent project state guide](docs/guides/relay-state.md). These are preview features, not certified lossless recovery or automatic execution.

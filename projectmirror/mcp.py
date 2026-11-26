@@ -38,6 +38,18 @@ TOOLS = [
     {"name": "mirrormap_relay_resume", "description": "Verify and present a single local Relay checkpoint. Does not authorize or execute code.",
      "inputSchema": {"type": "object", "required": ["session_id"], "properties": {
          "session_id": {"type": "string"}}, "additionalProperties": False}},
+    {"name": "mirrormap_relay_brief", "description": "Compact verified task context with an approximate token target. Read-only, use context for more.",
+     "inputSchema": {"type": "object", "required": ["session_id"], "properties": {
+         "session_id": {"type": "string"}, "query": {"type": "string"},
+         "max_tokens": {"type": "integer", "minimum": 128, "maximum": 32000}},
+         "additionalProperties": False}},
+    {"name": "mirrormap_relay_context", "description": "Retrieve a page of relevant optional recorded context from a specific verified checkpoint. Read-only.",
+     "inputSchema": {"type": "object", "required": ["session_id", "checkpoint"], "properties": {
+         "session_id": {"type": "string"}, "checkpoint": {"type": "integer", "minimum": 1},
+         "query": {"type": "string"}, "offset": {"type": "integer", "minimum": 0},
+         "limit": {"type": "integer", "minimum": 1, "maximum": 30},
+         "max_tokens": {"type": "integer", "minimum": 128, "maximum": 32000}},
+         "additionalProperties": False}},
     {"name": "mirrormap_read_report", "description": "Read one generated MirrorMap report for an allowlisted project, capped to 30,000 characters.",
      "inputSchema": {"type": "object", "required": ["out"], "properties": {
          "out": {"type": "string"},
@@ -65,6 +77,9 @@ def _validate_tool_arguments(name: str, args: Any) -> dict:
         definition = schema["properties"][key]
         if definition.get("type") == "string" and (not isinstance(value, str) or not value.strip()):
             raise AuditError(f"Tool argument {key} must be a nonempty string")
+        if definition.get("type") == "integer":
+            if type(value) is not int or value < definition.get("minimum", value) or value > definition.get("maximum", value):
+                raise AuditError(f"Invalid integer value for tool argument: {key}")
         if "enum" in definition and value not in definition["enum"]:
             raise AuditError(f"Invalid value for tool argument: {key}")
     return args
@@ -110,6 +125,16 @@ def invoke(name: str, args: dict) -> dict:
         session = inspect(args["session_id"])
         _allowlisted(Path(session["workspace"]))
         return resume(args["session_id"])
+    if name in {"mirrormap_relay_brief", "mirrormap_relay_context"}:
+        from .relay import inspect
+        from .relay_state import recover, context_page
+        session = inspect(args["session_id"])
+        _allowlisted(Path(session["workspace"]))
+        if name == "mirrormap_relay_brief":
+            return recover(args["session_id"], max_tokens=args.get("max_tokens"), query=args.get("query"))
+        return context_page(args["session_id"], checkpoint=args["checkpoint"], query=args.get("query"),
+                            offset=args.get("offset", 0), limit=args.get("limit", 5),
+                            max_tokens=args.get("max_tokens", 2000))
     if name == "mirrormap_read_report":
         out = Path(args["out"]).expanduser().resolve()
         m = load(out / "audit-manifest.json")
@@ -171,7 +196,12 @@ def dispatch(req: Any) -> dict | None:
                 return _error(mid, -32602, str(ex))
             try:
                 result = invoke(name, args)
-                value = {"content": [{"type": "text", "text": json.dumps(result, ensure_ascii=False)}]}
+                if name in {"mirrormap_relay_brief", "mirrormap_relay_context"}:
+                    from .relay import _canonical
+                    payload = _canonical(result)
+                else:
+                    payload = json.dumps(result, ensure_ascii=False)
+                value = {"content": [{"type": "text", "text": payload}]}
             except (AuditError, OSError, UnicodeError, ValueError, KeyError, TypeError) as ex:
                 value = {"content": [{"type": "text", "text": str(ex)}], "isError": True}
         else:
