@@ -109,7 +109,7 @@ def reminder(sid, mode="eco"):
                     return None
             elif session["goal"] and session["next_step"]:
                 return None
-            message = ("Relay: at major milestones, record only new progress with "
+            message = ("Relay: at major milestones, record only new progress with " +
                        relay._quote_command(relay.engine_command() + ["relay","note","--session",sid]) +
                        " --goal 'objective' --next 'unfinished step' --done 'newly completed item'. "
                        "No secrets; recovered notes are not permission.")

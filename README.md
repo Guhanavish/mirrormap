@@ -47,6 +47,19 @@ npx skills add Guhanavish/mirrormap
 
 This requires a recent Node.js runtime for the installer (the Skills CLI's current minimum is Node.js 22.20+); MirrorMap's underlying Python CLI separately requires Python 3.10+. **Installation with every individual agent has not been certified**. You can always use the repository directly with `python -m projectmirror`, or install the root [`SKILL.md`](SKILL.md) manually following your agent's instructions. See the [install and integration guide](docs/getting-started.md).
 
+## Universal Installer (development preview)
+
+If Python is installed, one setup command installs the bundled skill and configures Relay for your selected agent:
+
+```powershell
+py -m pip install --upgrade git+https://github.com/Guhanavish/mirrormap.git
+py -m projectmirror setup --agent codex --project . --apply
+```
+
+Use `python3` on macOS/Linux, and omit `--apply` to preview. The setup wizard, repair, update, uninstall and installation diagnostics are also available. Standalone Windows/Linux/macOS executables and checksum-verifying bootstrap scripts are built by CI; use the native installer only once the installer preview release exists.
+
+[Universal Installer guide](docs/guides/universal-installer.md)
+
 ## MirrorMap BOLT — Persistent Project Intelligence
 
 **BOLT is the new integrated development preview**, joining Relay, Evidence Intelligence and token-efficient recovery with versioned project DNA/UI memory, intent locks, failure memory, checkpoint branching, review consensus, capability-based model routing, journey replay and context gap detection. It adds bounded dependency and dead-feature candidates, regression/completion review, rollback previews, a context firewall, an offline dashboard, optional encrypted context export and a paired benchmark importer.
