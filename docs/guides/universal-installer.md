@@ -16,6 +16,8 @@ Use setup --wizard for an interactive terminal, --auto to select detected local 
 
 ## Without Python
 
+Windows users can also download the [repository-root executable](https://github.com/Guhanavish/mirrormap/blob/main/MirrorMap-Setup.exe) or the [ZIP alternative](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip). The root copy and the executable inside the ZIP are byte-identical to the verified Windows release asset; the ZIP includes a SHA256 checksum file. If downloads fail, inspect the exact error rather than overriding browser or endpoint security policy.
+
 The [standalone installer preview release](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1) is published after all four native build/smoke checks and source regression tests passed. Download the Windows x64 EXE directly from that release. There is no published npm package named mirrormap from this repository. If a browser reports a blocked executable or a security warning, inspect the exact warning and verify the source and checksum; do not bypass security policy.
 
 Download the appropriate executable and SHA256SUMS.txt from the GitHub release installer-preview-1. Verify the exact asset hash before running. The assets are unsigned native CLI executables, not signed MSI, PKG or graphical installers. Do not bypass Windows/macOS security policy.

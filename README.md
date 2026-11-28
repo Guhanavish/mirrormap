@@ -16,7 +16,7 @@
 
 [![Download Windows EXE](https://img.shields.io/badge/DOWNLOAD-Windows_x64_EXE-238636?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)
 
-**[Download from repository root](MirrorMap-Setup.exe)** · **[Windows download page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)** · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
+**[Download from repository root](MirrorMap-Setup.exe)** · **[Download ZIP instead](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip)** · **[Windows download page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)** · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
 
 No separate Python or Node.js required for the standalone installer. Unsigned development preview.
 
@@ -59,10 +59,10 @@ This requires a recent Node.js runtime for the installer (the Skills CLI's curre
 
 The standalone installer release is published, with Windows x64, Linux x64, macOS Intel and Apple Silicon assets. The native builds include Python; no separate Python or Node.js installation is needed. This is an unsigned preview with a terminal wizard, not a graphical installer.
 
-For Windows, download the executable, verify its SHA256 against the release checksum, then open PowerShell in your actual project folder:
+For Windows, download [MirrorMap-Setup.exe from the repository root](MirrorMap-Setup.exe) or the [ZIP alternative](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip) and extract it. Verify the executable's SHA256 against the release checksum (the ZIP includes a checksum file). Inspect any browser or security warning before continuing. Open PowerShell in your actual project folder:
 
 ```powershell
-& "$HOME\Downloads\mirrormap-windows-x64.exe" setup --wizard
+& "$HOME\Downloads\MirrorMap-Setup.exe" setup --wizard
 ```
 
 If Python is already installed, you can instead install from the GitHub source:
