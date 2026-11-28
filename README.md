@@ -1,3 +1,13 @@
+# Download MirrorMap for Windows
+
+[![Download MirrorMap EXE](https://img.shields.io/badge/DOWNLOAD_MIRRORMAP-Windows_x64_EXE-238636?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)
+
+**[Download Windows EXE — 14 MB](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)** · [ZIP alternative](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip) · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
+
+No separate Python or Node.js required. Unsigned development preview. [Direct repository copy](https://github.com/Guhanavish/mirrormap/raw/refs/heads/main/MirrorMap-Setup.exe) is also available.
+
+---
+
 <div align="center">
 
 <img src="assets/mirrormap-logo.webp" width="256" alt="MirrorMap logo — fractured glass map connected by a dotted route" />
@@ -13,12 +23,6 @@
 [![MIT](https://img.shields.io/badge/License-MIT-29423C)](LICENSE)
 [![Official beta](https://img.shields.io/badge/Release-v0.4.0--beta-2D6254)](https://github.com/Guhanavish/mirrormap/releases/tag/v0.4.0-beta)
 [![Agent Skill](https://img.shields.io/badge/Open_Agent_Skill-SKILL.md-A5D9B4)](SKILL.md)
-
-[![Download Windows EXE](https://img.shields.io/badge/DOWNLOAD-Windows_x64_EXE-238636?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)
-
-**[Download from repository root](MirrorMap-Setup.exe)** · **[Download ZIP instead](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip)** · **[Windows download page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)** · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
-
-No separate Python or Node.js required for the standalone installer. Unsigned development preview.
 
 [![Start Auditing](https://img.shields.io/badge/START_AUDITING-Quick_Start-9AE0BC?style=for-the-badge&logo=python&logoColor=14231C)](#get-a-result-in-one-command)
 [![Read the Guide](https://img.shields.io/badge/READ_THE_GUIDE-Documentation-18313A?style=for-the-badge&logo=readthedocs&logoColor=white)](docs/getting-started.md)
@@ -59,10 +63,10 @@ This requires a recent Node.js runtime for the installer (the Skills CLI's curre
 
 The standalone installer release is published, with Windows x64, Linux x64, macOS Intel and Apple Silicon assets. The native builds include Python; no separate Python or Node.js installation is needed. This is an unsigned preview with a terminal wizard, not a graphical installer.
 
-For Windows, download [MirrorMap-Setup.exe from the repository root](MirrorMap-Setup.exe) or the [ZIP alternative](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip) and extract it. Verify the executable's SHA256 against the release checksum (the ZIP includes a checksum file). Inspect any browser or security warning before continuing. Open PowerShell in your actual project folder:
+For Windows, download [MirrorMap-Setup.exe directly from the repository](https://github.com/Guhanavish/mirrormap/raw/refs/heads/main/MirrorMap-Setup.exe) or the [ZIP alternative](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/MirrorMap-Setup-Windows-x64.zip) and extract it. Verify the executable's SHA256 against the release checksum (the ZIP includes a checksum file). Inspect any browser or security warning before continuing. Open PowerShell in your actual project folder (adjust the filename if you downloaded the repository copy or ZIP):
 
 ```powershell
-& "$HOME\Downloads\MirrorMap-Setup.exe" setup --wizard
+& "$HOME\Downloads\mirrormap-windows-x64.exe" setup --wizard
 ```
 
 If Python is already installed, you can instead install from the GitHub source:
