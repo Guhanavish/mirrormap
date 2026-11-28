@@ -16,9 +16,9 @@ Use setup --wizard for an interactive terminal, --auto to select detected local 
 
 ## Without Python
 
-The standalone installer preview release will be published only after all four native build/smoke checks and source regression tests pass. Before the release assets exist, use the Python installation or skill-only workflow. There is no published npm package named mirrormap from this repository.
+The [standalone installer preview release](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1) is published after all four native build/smoke checks and source regression tests passed. Download the Windows x64 EXE directly from that release. There is no published npm package named mirrormap from this repository. If a browser reports a blocked executable or a security warning, inspect the exact warning and verify the source and checksum; do not bypass security policy.
 
-Once the release is available, download the appropriate executable and SHA256SUMS.txt from the GitHub release installer-preview-1. Verify the exact asset hash before running. The assets are unsigned native CLI executables, not signed MSI, PKG or graphical installers. Do not bypass Windows/macOS security policy.
+Download the appropriate executable and SHA256SUMS.txt from the GitHub release installer-preview-1. Verify the exact asset hash before running. The assets are unsigned native CLI executables, not signed MSI, PKG or graphical installers. Do not bypass Windows/macOS security policy.
 
 Windows x64:
 
@@ -43,7 +43,7 @@ On macOS/Linux, download and review scripts/install.sh, then run:
     sh install.sh setup --agent codex --project .
     sh install.sh setup --agent codex --project . --apply
 
-For Node.js 20+ with Git and network access, the GitHub-distributed bootstrap can be invoked as follows (only after the native preview assets are published):
+For Node.js 20+ with Git and network access, the GitHub-distributed bootstrap can be invoked as follows:
 
     npx --yes --package github:Guhanavish/mirrormap#main mirrormap-bootstrap setup --agent codex --project . --apply
 

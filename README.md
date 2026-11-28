@@ -14,6 +14,12 @@
 [![Official beta](https://img.shields.io/badge/Release-v0.4.0--beta-2D6254)](https://github.com/Guhanavish/mirrormap/releases/tag/v0.4.0-beta)
 [![Agent Skill](https://img.shields.io/badge/Open_Agent_Skill-SKILL.md-A5D9B4)](SKILL.md)
 
+[![Download Windows EXE](https://img.shields.io/badge/DOWNLOAD-Windows_x64_EXE-238636?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)
+
+**[Windows download page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)** · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
+
+No separate Python or Node.js required for the standalone installer. Unsigned development preview.
+
 [![Start Auditing](https://img.shields.io/badge/START_AUDITING-Quick_Start-9AE0BC?style=for-the-badge&logo=python&logoColor=14231C)](#get-a-result-in-one-command)
 [![Read the Guide](https://img.shields.io/badge/READ_THE_GUIDE-Documentation-18313A?style=for-the-badge&logo=readthedocs&logoColor=white)](docs/getting-started.md)
 [![Creator](https://img.shields.io/badge/CREATOR-Visit_Website-18313A?style=for-the-badge&logo=vercel&logoColor=white)](https://guhanavish.vercel.app/)
@@ -49,14 +55,24 @@ This requires a recent Node.js runtime for the installer (the Skills CLI's curre
 
 ## Universal Installer (development preview)
 
-If Python is installed, one setup command installs the bundled skill and configures Relay for your selected agent:
+**[Download the Windows x64 executable (14 MB)](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)** · [Release page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1) · [SHA256 checksums](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/SHA256SUMS.txt)
+
+The standalone installer release is published, with Windows x64, Linux x64, macOS Intel and Apple Silicon assets. The native builds include Python; no separate Python or Node.js installation is needed. This is an unsigned preview with a terminal wizard, not a graphical installer.
+
+For Windows, download the executable, verify its SHA256 against the release checksum, then open PowerShell in your actual project folder:
 
 ```powershell
-py -m pip install --upgrade git+https://github.com/Guhanavish/mirrormap.git
-py -m projectmirror setup --agent codex --project . --apply
+& "$HOME\Downloads\mirrormap-windows-x64.exe" setup --wizard
 ```
 
-Use `python3` on macOS/Linux, and omit `--apply` to preview. The setup wizard, repair, update, uninstall and installation diagnostics are also available. Standalone Windows/Linux/macOS executables and checksum-verifying bootstrap scripts are built by CI; use the native installer only once the installer preview release exists.
+If Python is already installed, you can instead install from the GitHub source:
+
+```powershell
+python -m pip install --upgrade https://github.com/Guhanavish/mirrormap/archive/refs/heads/main.zip
+python -m projectmirror setup --agent codex --project . --apply
+```
+
+The PyPI package name `mirrormap` is not published by this project. Approve the native hooks in your agent after setup. For restricted/remote agent environments, install inside the actual execution environment where permitted.
 
 [Universal Installer guide](docs/guides/universal-installer.md)
 

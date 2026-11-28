@@ -1,0 +1,76 @@
+name: Windows installer download convenience
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-root-download.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: windows-root-download
+  cancel-in-progress: false
+jobs:
+  mirror:
+    if: github.repository == 'Guhanavish/mirrormap' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Verify exact previously tested release executable
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/installer-mirror"
+          gh release download installer-preview-1 --pattern mirrormap-windows-x64.exe --dir "$RUNNER_TEMP/installer-mirror"
+          cd "$RUNNER_TEMP/installer-mirror"
+          printf '%s  %s\n' 'efd071f1a95167ba0cacdf8ebbded2965c17586f7e3872e8e245b763f2a6e01f' 'mirrormap-windows-x64.exe' | sha256sum -c -
+      - name: Commit verified executable at repository root
+        run: |
+          set -euo pipefail
+          if [ -e MirrorMap-Setup.exe ]; then
+            printf '%s  %s\n' 'efd071f1a95167ba0cacdf8ebbded2965c17586f7e3872e8e245b763f2a6e01f' 'MirrorMap-Setup.exe' | sha256sum -c -
+          else
+            cp "$RUNNER_TEMP/installer-mirror/mirrormap-windows-x64.exe" MirrorMap-Setup.exe
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("README.md")
+          text = path.read_text(encoding="utf-8")
+          marker = "**[Windows download page]"
+          link = "**[Download from repository root](MirrorMap-Setup.exe)** · "
+          if link not in text:
+              assert marker in text
+              text = text.replace(marker, link + marker, 1)
+              path.write_text(text, encoding="utf-8")
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- MirrorMap-Setup.exe README.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'docs(distribution): expose verified Windows installer at repository root'
+            git push origin HEAD:main
+          fi
+      - name: Add ZIP download alternative without overwriting existing assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view installer-preview-1 --json assets --jq '.assets[].name' | grep -Fxq 'MirrorMap-Setup-Windows-x64.zip'; then
+            echo 'ZIP asset already exists; leaving untouched.'
+            exit 0
+          fi
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          directory = Path(os.environ["RUNNER_TEMP"]) / "installer-mirror"
+          with ZipFile(directory / "MirrorMap-Setup-Windows-x64.zip", "w", compression=ZIP_DEFLATED) as archive:
+              archive.write(directory / "mirrormap-windows-x64.exe", "MirrorMap-Setup.exe")
+              archive.writestr("SHA256SUMS.txt", "efd071f1a95167ba0cacdf8ebbded2965c17586f7e3872e8e245b763f2a6e01f  MirrorMap-Setup.exe\n")
+          PY
+          gh release upload installer-preview-1 "$RUNNER_TEMP/installer-mirror/MirrorMap-Setup-Windows-x64.zip"
