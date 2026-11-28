@@ -29,6 +29,9 @@ def safe_audit_dir(path: Path) -> Path:
 
 def cmd_main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in {"setup", "repair", "update", "uninstall", "installation-doctor"}:
+        from .installer import main as installer_main
+        return installer_main(list(argv))
     if argv and argv[0] == "bolt":
         from .bolt import main as bolt_main
         return bolt_main(list(argv[1:]))

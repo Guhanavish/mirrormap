@@ -1,3 +1,9 @@
+## Unreleased — Universal Installer preview
+
+- Setup manager with explicit previews, interactive terminal wizard, local agent detection and absolute native runtime hook commands.
+- Managed skill installation, repair/update/uninstall and diagnostics; preserve unrelated hooks and existing unowned skills.
+- Native executable build workflow and checksum-verifying PowerShell, shell and Node bootstrap scripts. Publication is gated by platform smoke tests and source tests; unsigned preview, no npm registry package.
+
 ## Unreleased — MirrorMap BOLT development preview
 
 - Introduce local, versioned project DNA/UI memory, explicit intent locks, reviewed failure records and scope checks.

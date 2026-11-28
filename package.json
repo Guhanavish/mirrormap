@@ -1,0 +1,16 @@
+{
+  "name": "mirrormap-installer",
+  "version": "0.1.0",
+  "description": "MirrorMap native setup bootstrap (GitHub distribution)",
+  "private": true,
+  "bin": {
+    "mirrormap-bootstrap": "scripts/bootstrap.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "scripts/bootstrap.mjs"
+  ],
+  "license": "MIT"
+}
