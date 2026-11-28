@@ -32,6 +32,10 @@ jobs:
           python -m projectmirror relay --help
           python -m projectmirror relay install-hooks --help
           python -m projectmirror bolt --help
+          python -m projectmirror setup --help
+          python -m projectmirror installation-doctor
+          node --check scripts/bootstrap.mjs
+          sh -n scripts/install.sh
       - name: Build package
         run: python -m pip wheel --no-deps . --wheel-dir dist
       - name: Check wheel contents and excluded launch assets

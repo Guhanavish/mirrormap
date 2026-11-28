@@ -712,7 +712,7 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
         if agent == "cursor":
             record = {"command": command}
         else:
-            record = {"hooks": [{"type": "command", "command": command, "timeout": 10}]}
+            record = {"hooks": [{"type": "command", "command": command, "timeout": 30 if len(engine or engine_command())==1 else 10}]}
         existing = hooks.setdefault(event, [])
         if not isinstance(existing, list):
             raise AuditError("Existing hook event configuration must be an array")

@@ -66,7 +66,7 @@ def _skill_dest(agent):
 
 def _bundle():
     src = Path(__file__).resolve().parent / "skill_bundle"
-    if not (src / "SKILL.md").is_file():
+    if not (src / "SKILL.md").is_file() or not (src / "references").is_dir():
         raise AuditError("Packaged skill bundle missing")
     return src
 
@@ -76,7 +76,7 @@ def _bundle_files(src):
 
 
 def _skill_hashes(dest):
-    if not dest.is_dir() or dest.is_symlink():
+    if not dest.is_dir() or dest.is_symlink() or (dest / "references").is_symlink():
         return None
     result = {}
     for path in _bundle_files(dest):
@@ -154,14 +154,20 @@ def _managed_engine(apply):
 
 def _probe(engine):
     try:
-        result = subprocess.run(engine + ["relay", "--help"], capture_output=True, timeout=60, check=False)
+        result = subprocess.run(engine + ["relay", "--help"], capture_output=True, timeout=60, check=False,
+                                env={**os.environ,"PYINSTALLER_RESET_ENVIRONMENT":"1"})
         return result.returncode == 0
     except (OSError, subprocess.TimeoutExpired):
         return False
 
 
 def diagnostics(project=None):
-    info = _read(home() / "installation.json")
+    error = None
+    try:
+        info = _read(home() / "installation.json")
+    except (AuditError,OSError,ValueError,TypeError) as exc:
+        info={"entries":[]}
+        error=str(exc)
     agents = []
     for agent in relay.AGENTS:
         command = {"codex": "codex", "claude": "claude", "cursor": "cursor"}[agent]
@@ -186,11 +192,11 @@ def diagnostics(project=None):
                         "engine": item["engine"]})
     return {"version": __version__, "runtime": "bundled" if getattr(sys, "frozen", False) else "python",
             "engine": relay.engine_command(), "git": shutil.which("git"), "agents": agents,
-            "managed_installations": entries, "host_hook_delivery_verified": False,
+            "managed_installations": entries, "metadata_error":error, "host_hook_delivery_verified": False,
             "notice": "Local detection only. Remote/sandboxed agents need their own installation. Review and trust hooks in the host."}
 
 
-def setup(project, agents, *, mode="eco", capture=False, apply=False, action="setup"):
+def _setup(project, agents, *, mode="eco", capture=False, apply=False, action="setup"):
     root = relay._workspace(project)
     state_path = home() / "installation.json"
     state = _read(state_path)
@@ -259,6 +265,42 @@ def setup(project, agents, *, mode="eco", capture=False, apply=False, action="se
     return result
 
 
+def setup(project, agents, *, mode="eco", capture=False, apply=False, action="setup"):
+    if not apply:
+        return _setup(project,agents,mode=mode,capture=capture,apply=False,action=action)
+    root=relay._workspace(project)
+    directory=home().resolve()
+    if directory==root or root in directory.parents:
+        raise AuditError("Installer must remain outside the project")
+    directory.mkdir(parents=True,exist_ok=True)
+    lock=directory/"installation.lock"
+    try:
+        lock.mkdir()
+    except FileExistsError as exc:
+        raise AuditError("Installer lock exists. Close other installers; after inspecting interrupted setup, remove only the empty installation.lock directory.") from exc
+    try:
+        return _setup(project,agents,mode=mode,capture=capture,apply=True,action=action)
+    finally:
+        lock.rmdir()
+
+
+def wizard(args):
+    if not sys.stdin.isatty():
+        raise AuditError("Wizard needs an interactive terminal; use --agent codex and --apply explicitly")
+    candidates=[a["agent"] for a in diagnostics()["agents"] if a["detected"]]
+    print("MirrorMap setup — project:",str(relay._workspace(args.project)),file=sys.stderr)
+    print("Detected agents:",", ".join(candidates) or "none",file=sys.stderr)
+    raw=input("Agents (codex, claude, cursor; comma separated): ").strip()
+    agents=[a.strip().lower() for a in raw.split(",") if a.strip()] or candidates
+    mode=input("Mode [eco]: ").strip().lower() or "eco"
+    capture=input("Capture bounded conversation excerpts? [y/N]: ").strip().lower()=="y"
+    preview=setup(args.project,agents,mode=mode,capture=capture)
+    print(json.dumps(preview,ensure_ascii=False,indent=2))
+    if input("Apply these local settings? [y/N]: ").strip().lower()!="y":
+        return preview
+    return setup(args.project,agents,mode=mode,capture=capture,apply=True)
+
+
 def main(argv=None):
     p=argparse.ArgumentParser(prog="mirrormap",description="User-scope MirrorMap installation manager")
     sub=p.add_subparsers(dest="command",required=True)
@@ -271,10 +313,14 @@ def main(argv=None):
             cmd.add_argument("--mode",choices=MODES,default="eco")
             cmd.add_argument("--capture-context",action="store_true")
             cmd.add_argument("--apply",action="store_true")
+            if name=="setup":
+                cmd.add_argument("--wizard",action="store_true")
     args=p.parse_args(argv)
     try:
         if args.command=="installation-doctor":
             result=diagnostics(args.project)
+        elif args.command=="setup" and args.wizard:
+            result=wizard(args)
         else:
             agents=args.agent
             if args.auto:
@@ -283,6 +329,6 @@ def main(argv=None):
                          apply=args.apply,action=args.command)
         print(json.dumps(result,ensure_ascii=False,indent=2))
         return 0
-    except (AuditError,OSError,ValueError,TypeError,KeyError) as exc:
+    except (AuditError,OSError,ValueError,TypeError,KeyError,EOFError) as exc:
         print("MirrorMap setup: "+str(exc),file=sys.stderr)
         return 2
