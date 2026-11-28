@@ -16,7 +16,7 @@
 
 [![Download Windows EXE](https://img.shields.io/badge/DOWNLOAD-Windows_x64_EXE-238636?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/Guhanavish/mirrormap/releases/download/installer-preview-1/mirrormap-windows-x64.exe)
 
-**[Windows download page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)** · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
+**[Download from repository root](MirrorMap-Setup.exe)** · **[Windows download page](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)** · [All platforms and checksums](https://github.com/Guhanavish/mirrormap/releases/tag/installer-preview-1)
 
 No separate Python or Node.js required for the standalone installer. Unsigned development preview.
 
