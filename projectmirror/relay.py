@@ -657,15 +657,21 @@ def _quote_command(parts: list[str]) -> str:
     return shlex.join(parts)
 
 
+def engine_command() -> list[str]:
+    """Absolute executable invocation; frozen builds do not accept Python flags."""
+    return [sys.executable] if getattr(sys, "frozen", False) else [sys.executable, "-I", "-m", "projectmirror"]
+
+
 def _config_path(agent: str) -> Path:
     home = Path.home()
     return {"claude": home / ".claude" / "settings.json",
-            "codex": home / ".codex" / "hooks.json",
+            "codex": Path(os.environ.get("CODEX_HOME", str(home / ".codex"))).expanduser() / "hooks.json",
             "cursor": home / ".cursor" / "hooks.json"}[agent]
 
 
 def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
-                       config_path: Path | None = None, capture_context: bool = False, mode: str = "eco") -> dict:
+                       config_path: Path | None = None, capture_context: bool = False, mode: str = "eco",
+                       engine: list[str] | None = None, previous_commands: tuple[str, ...] = ()) -> dict:
     """Return preview for additive user-level hook config; never mutate without apply."""
     from .relay_efficiency import MODES
     if mode not in MODES or (mode == "manual" and capture_context and not remove):
@@ -687,10 +693,11 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
             raise AuditError("Unsupported Cursor hook configuration version")
         config.setdefault("version", 1)
     commands = []
+    removed_commands = []
     # Hook scripts import the installed distribution in isolated Python mode to
     # avoid import-shadowing by an unrelated repository's projectmirror.py.
     for event in EVENTS[agent]:
-        parts = [sys.executable, "-I", "-m", "projectmirror", "relay", "hook",
+        parts = (engine or engine_command()) + ["relay", "hook",
                  "--agent", agent, "--event", event, "--project", str(root)]
         old_command = _quote_command(parts)
         capture_command = _quote_command(parts + ["--capture-context"])
@@ -713,14 +720,19 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
         # Exactly match generated commands, preserve third-party hooks and others.
         # Switch recording modes without duplicating our own hooks.
         # Preserve unrelated commands, including those in grouped hooks.
-        own = variants
+        own = variants | set(previous_commands)
         cleaned = []
         for item in existing:
-            if isinstance(item, dict) and item.get("command") in own:
+            if isinstance(item, dict) and isinstance(item.get("command"), str) and item["command"] in own:
+                removed_commands.append(item["command"])
                 continue
             if isinstance(item, dict) and isinstance(item.get("hooks"), list):
-                children = [c for c in item["hooks"] if not
-                            (isinstance(c, dict) and c.get("command") in own)]
+                children = []
+                for child in item["hooks"]:
+                    if isinstance(child, dict) and isinstance(child.get("command"), str) and child["command"] in own:
+                        removed_commands.append(child["command"])
+                    else:
+                        children.append(child)
                 if not children and item["hooks"]:
                     continue
                 item = {**item, "hooks": children}
@@ -736,7 +748,7 @@ def hook_configuration(agent: str, project: str | Path, *, remove: bool = False,
     if remove and not hooks:
         config.pop("hooks", None)
     return {"agent": agent, "project": str(root), "config_path": str(path),
-            "configuration": config, "commands": commands,
+            "configuration": config, "commands": commands, "removed_commands": removed_commands,
             "action": "remove" if remove else "install", "mode": mode,
             "notice": "User-level hooks are project-filtered; no agent settings are changed until --apply."}
 
@@ -751,8 +763,9 @@ def _contains_command(entry: Any, command: str) -> bool:
 
 
 def modify_hooks(agent: str, project: str | Path, *, apply: bool = False,
-                 remove: bool = False, config_path: Path | None = None, capture_context: bool = False, mode: str = "eco") -> dict:
-    result = hook_configuration(agent, project, remove=remove, config_path=config_path, capture_context=capture_context, mode=mode)
+                 remove: bool = False, config_path: Path | None = None, capture_context: bool = False, mode: str = "eco",
+                 engine: list[str] | None = None, previous_commands: tuple[str, ...] = ()) -> dict:
+    result = hook_configuration(agent, project, remove=remove, config_path=config_path, capture_context=capture_context, mode=mode, engine=engine, previous_commands=previous_commands)
     if not apply:
         return {**result, "applied": False}
     path = Path(result["config_path"])

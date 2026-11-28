@@ -250,7 +250,8 @@ def doctor() -> dict:
     checks = [{"name": "python_3_10", "ok": sys.version_info >= (3, 10), "value": platform.python_version()},
               {"name": "git", "ok": shutil.which("git") is not None, "value": shutil.which("git") or "not found"},
               {"name": "package", "ok": True, "value": "MirrorMap Python core available"}]
-    return {"schema_version": SCHEMA, "checks": checks,
+    from .installer import diagnostics
+    return {"installation": diagnostics(), "schema_version": SCHEMA, "checks": checks,
             "note": "Tool presence is not a security, runtime, or platform compatibility guarantee."}
 
 
@@ -283,6 +284,9 @@ def install_skill(destination: Path, *, apply: bool) -> dict:
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
+    if argv and argv[0] in {"setup", "repair", "update", "uninstall", "installation-doctor"}:
+        from .installer import main as installer_main
+        return installer_main(list(argv))
     if argv and argv[0] == "bolt":
         from .bolt import main as bolt_main
         return bolt_main(list(argv[1:]))
