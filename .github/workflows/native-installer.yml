@@ -1,0 +1,89 @@
+name: Standalone installer builds
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/native-installer.yml'
+      - 'projectmirror/**'
+      - 'scripts/**'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Native ${{ matrix.asset }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: mirrormap-windows-x64.exe
+            built: mirrormap.exe
+          - os: ubuntu-22.04
+            asset: mirrormap-linux-x64
+            built: mirrormap
+          - os: macos-15-intel
+            asset: mirrormap-macos-x64
+            built: mirrormap
+          - os: macos-14
+            asset: mirrormap-macos-arm64
+            built: mirrormap
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build dependencies
+        run: python -m pip install ".[bolt-crypto]" "pyinstaller>=6.11,<7"
+      - name: Build native executable
+        run: python -m PyInstaller --clean --noconfirm --onefile --name mirrormap --add-data "projectmirror/skill_bundle:projectmirror/skill_bundle" scripts/native_entry.py
+      - name: Smoke test native executable
+        run: python scripts/native_smoke.py dist/${{ matrix.built }}
+      - name: Name release asset
+        run: python -c "import shutil; shutil.copy2('dist/${{ matrix.built }}','${{ matrix.asset }}')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+  publish:
+    if: github.repository == 'Guhanavish/mirrormap' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify source regression suite
+        run: python -m unittest discover -s tests -v
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Publish immutable installer preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view installer-preview-1 >/dev/null 2>&1; then
+            echo "Installer preview already published; refusing to overwrite."
+            exit 0
+          fi
+          cd release-assets
+          sha256sum mirrormap-windows-x64.exe mirrormap-linux-x64 mirrormap-macos-x64 mirrormap-macos-arm64 > SHA256SUMS.txt
+          gh release create installer-preview-1 mirrormap-* SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "MirrorMap Universal Installer Preview 1" \
+            --prerelease --notes "Unsigned standalone engine preview. Native smoke tests on Windows x64, Linux x64, macOS Intel and Apple Silicon. Check SHA256SUMS.txt. Review and trust native agent hooks separately; live host interoperability remains unverified."
